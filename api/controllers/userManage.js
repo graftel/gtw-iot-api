@@ -1,5 +1,6 @@
 
 var shareUtil = require('./shareUtil.js');
+
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -23,7 +24,8 @@ module.exports = {
   deleteUser: deleteUser,
   resetUser: resetUser,
   validateResetPasswordLink: validateResetPasswordLink,
-  updatePassword: updatePassword
+  updatePassword: updatePassword,
+  updateUserAsset: updateUserAsset
 };
 
 function createUser(req, res) {
@@ -31,13 +33,13 @@ function createUser(req, res) {
   console.log(userobj);
   if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
     console.log("is valid = false0");
-    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+    shareUtil.SendInvalidInput(res);
   }
   else {
     if(!userobj.EmailAddress && !userobj.Password)
     {
       console.log("is valid = false1");
-       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+       shareUtil.SendInvalidInput(res);
     }
     else {
 
@@ -68,6 +70,8 @@ function createUser(req, res) {
             console.error(msg);
             shareUtil.SendInternalErr(res,msg);
           }else{
+            completeRegistrationEmail(userobj.EmailAddress, userobj.UserID, userobj.VerificationCode);
+
             shareUtil.SendSuccessWithData(res, userobj);
           }
           });
@@ -116,7 +120,8 @@ function resetUser(req, res) {
                      VerificationCode: expressvalues[":v1"],
                      UserID: data.Items[0].UserID
                    };
-                   shareUtil.SendSuccessWithData(res,resetinfo);
+                   sendForgotPasswordEmail(emailid, expressvalues[":v1"]);
+                   shareUtil.SendSuccess(res,'Reset Succeed');
                  }
              });
 
@@ -130,7 +135,7 @@ function resetUser(req, res) {
   }
   else {
     console.log("is valid = false1");
-     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+     shareUtil.SendInvalidInput(res);
   }
 
 
@@ -142,13 +147,13 @@ function updateUser(req, res) {
   console.log(userobj);
   if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
     console.log("is valid = false0");
-    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+    shareUtil.SendInvalidInput(res);
   }
   else {
     if(!userobj.EmailAddress)
     {
       console.log("is valid = false1");
-       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+       shareUtil.SendInvalidInput(res);
     }
     else {
 
@@ -213,12 +218,46 @@ function updateUser(req, res) {
 }
 
 
+function updateUserAsset(userID, assetID, callback) {
+  if(!userID)
+  {
+    callback(false, null);
+  }
+  else {
+    var updateParams = {
+          TableName : shareUtil.tables.users,
+          Key : {
+            UserID : userID,
+                },
+        UpdateExpression : 'set #assets = list_append(if_not_exists(#assets, :empty_list), :id)',
+        ExpressionAttributeNames: {
+            '#assets': 'Assets'
+          },
+        ExpressionAttributeValues: {
+          ':id': [{AssetID: assetID}],
+          ':empty_list': []
+        }
+
+      };
+    shareUtil.awsclient.update(updateParams, function (err, data) {
+         if (err) {
+             var msg = "Error:" +  JSON.stringify(err, null, 2);
+             console.error(msg);
+             callback(false,msg);
+         } else {
+            callback(true,null);
+         }
+     });
+  }
+}
+
+
 function getSettings(req, res) {
   var userid = req.swagger.params.userID.value;
 
   if (typeof userid == "undefined")
   {
-    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+    shareUtil.SendInvalidInput(res);
   }
   else {
 
@@ -464,7 +503,7 @@ function activate(req, res) {
                     }
                     else{
                       console.log("activate user succeed");
-                      shareUtil.SendSuccess(res);
+                      shareUtil.SendSuccess(res, 'Activation Succeed');
                     }
                   });
 
@@ -609,4 +648,42 @@ function IsEmailExist(email, callback){
 
      }
   }
+}
+
+
+
+function sendForgotPasswordEmail(emailid, VerificationCode) {
+  const sgMail = require('@sendgrid/mail');
+  sgMail.setApiKey(require('../../sg.js').SENDGRID_API_KEY);
+  var link =  "http://localhost:3000/reset-password?email=" + emailid + "&code=" + VerificationCode;
+  const msg = {
+    to: emailid,
+    from: 'no-reply@graftel.com',
+    subject: 'Reset password for IIoT Monitering System',
+    html: "Hello,<br><br>You recently requested to reset password for your Heat Exchange Monitering System"
+        + " account.<br><br>To reset your password, click the following link or copy and paste the link into your browser: <br><a href='"
+        + link
+        + "'>Click Here</a>"
+        + "<br><br>After resetting your password, in order to access your account, you will need to put in your email address and password "
+        + "in the Log In section.<br><br>This password reset link will expire in 30 minutes "
+        + "<br><br>If you did not request to have your password reset you can safely ignore this email.<br><br>"
+        + "If you need further assistance please contact our support team at http://www.graftel.com/contact/.<br><br>Thank you,<br>Graftel Team.",
+  };
+  sgMail.send(msg);
+}
+
+function completeRegistrationEmail(emailid, userid, verificationCode) {
+  const sgMail = require('@sendgrid/mail');
+  sgMail.setApiKey(require('../../sg.js').SENDGRID_API_KEY);
+  var link =  "http://localhost:3000/activate?id=" + userid + "&code=" + verificationCode;
+  const msg = {
+    to: emailid,
+    from: 'no-reply@graftel.com',
+    subject: 'Complete your registration for Heat Exchange Monitering System',
+    html: "Hello,<br><br>Thank you for registering with HxMonitor.io"
+        + "<br><br>To complete your registration please use below link: <br><br>"
+        + '<a href="'+link+'">' + "Click Here</a><br><br>"
+        + "If you need further assistance please contact our support team at http://www.graftel.com/contact/.<br><br>Thank you,<br>Graftel Team",
+  };
+  sgMail.send(msg);
 }

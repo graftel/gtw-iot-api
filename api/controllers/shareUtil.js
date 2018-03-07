@@ -13,7 +13,7 @@ const INTERNAL_ERR = "Internal Error";
 var tables = {
     company: "Hx.Company",
     users: "Hx.Users",
-    assets: "Hx.Assets",
+    assets: "Hx.Asset",
     deviceConfig: "Hx.DeviceConfiguration",
     rawData: "Hx.RawData",
     calculatedData: "Hx.CalculatedData",

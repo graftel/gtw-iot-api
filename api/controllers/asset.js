@@ -11,6 +11,7 @@
   It is a good idea to list the modules that your application depends on in the package.json in the project root
  */
 var shareUtil = require('./shareUtil.js');
+var userManage = require('./userManage.js');
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -42,32 +43,50 @@ module.exports = {
 function getAssetByUserID(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var userid = req.swagger.params.userID.value;
+  // first get assets in UserID
 
   var assetsParams = {
-     TableName : shareUtil.tables.assets,
-  //   ProjectionExpression: ["AssetID","AddTimeStamp","DisplayName","LastestTimeStamp","VerificationCode"],
-     FilterExpression : "UserID = :v1",
-     ExpressionAttributeValues : {':v1' : userid.toString()}
+    TableName : shareUtil.tables.users,
+    KeyConditionExpression : "UserID = :v1",
+    ExpressionAttributeValues : {':v1' : userid
+                               },
+    ProjectionExpression : "Assets"
   };
-  shareUtil.awsclient.scan(assetsParams, onScan);
+  shareUtil.awsclient.query(assetsParams, onScan);
   function onScan(err, data) {
        if (err) {
            var msg = "Error:" + JSON.stringify(err, null, 2);
            shareUtil.SendInternalErr(res,msg);
        } else {
+         var sendData = {
+           Items: [],
+           Count: 0
+         };
          if (data.Count == 0)
          {
-           var errmsg = {
-             message: "Items not found"
-           };
-           shareUtil.SendNotFound(res);
+           shareUtil.SendSuccessWithData(res, sendData);
          }
          else {
-           console.log(data);
-         //  res.send(data.items);
-           delete data["Count"];
-           delete data["ScannedCount"];
-           shareUtil.SendSuccessWithData(res, data);
+           var assets = data.Items[0].Assets;
+
+           if (typeof assets == "undefined")
+           {
+             shareUtil.SendSuccessWithData(res, sendData);
+           }
+           else {
+             if (assets.length == 0) {
+                shareUtil.SendSuccessWithData(res, sendData);
+             }
+             else{
+               getSingleAssetInternal(0, assets, null, function(assetsdata){
+                 sendData.Items = assetsdata;
+                 sendData.Count = assetsdata.length;
+                 shareUtil.SendSuccessWithData(res, sendData);
+               });
+             }
+           }
+
+
          }
 
        }
@@ -76,14 +95,43 @@ function getAssetByUserID(req, res) {
 
 }
 
+function getSingleAssetInternal(index, assets, assetout, callback) {
+    if (index < assets.length){
+      if (index == 0)
+      {
+        assetout = [];
+      }
+      var assetsParams = {
+         TableName : shareUtil.tables.assets,
+         KeyConditionExpression : "AssetID = :v1",
+         ExpressionAttributeValues : {':v1' : assets[index].AssetID}
+      };
+      shareUtil.awsclient.query(assetsParams, onScan);
+      function onScan(err, data) {
+           if (!err) {
+             if (data.Count == 1)
+             {
+                assetout.push(data.Items[0]);
+             }
+
+           }
+           getSingleAssetInternal(index + 1, assets, assetout, callback);
+       }
+    }
+    else {
+      callback(assetout);
+    }
+}
+
+
 function getSingleAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  var companyid = req.swagger.params.AssetID.value;
+  var assetID = req.swagger.params.AssetID.value;
 
   var assetsParams = {
      TableName : shareUtil.tables.assets,
      KeyConditionExpression : "AssetID = :v1",
-     ExpressionAttributeValues : {':v1' : companyid.toString()}
+     ExpressionAttributeValues : {':v1' : assetID.toString()}
   };
   shareUtil.awsclient.query(assetsParams, onScan);
   function onScan(err, data) {
@@ -108,97 +156,57 @@ function getSingleAsset(req, res) {
 function addAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
-  var isValid = true;
+  console.log(assetobj);
   if(assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
-    isValid  = false;
+    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
-    if(!assetobj.AssetID)
+    if(!assetobj.DisplayName && !assetobj.UserID)
     {
-      isValid  = false;
+      shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
     }
     else {
-      // check if asset exists
-      var assetsParams = {
-         TableName : shareUtil.tables.assets,
-         ProjectionExpression: ["AssetID","AddTimeStamp","DisplayName","LastestTimeStamp","VerificationCode"],
-         FilterExpression : "AssetID = :v1",
-         ExpressionAttributeValues : {':v1' : assetobj.AssetID.toString()}
+      var uuidv1 = require('uuid/v1');
+      var crypto = require('crypto');
+      var assetID = uuidv1();
+      var params = {
+        TableName : shareUtil.tables.assets,
+        Item : {
+          AssetID: assetID,
+          AddTimeStamp: Math.floor((new Date).getTime()/1000),
+          LatestTimeStamp: 0,
+          DeviceCount: 0
+        },
+        ConditionExpression : "attribute_not_exists(AssetID)"
       };
-      shareUtil.awsclient.scan(assetsParams, onScan);
-      function onScan(err, data) {
-           if (err) {
-               var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-               console.error(msg);
-               var errmsg = {
-                 message: msg
-               };
-               res.status(500).send(errmsg);
-           } else {
-             if (data.Count == 0)
-             {
-               var params = {
-                 TableName : tables.assets,
-                 Item : {
-                   AssetID: assetobj.AssetID,
-                   AddTimeStamp: Math.floor((new Date).getTime()/1000),
-                   LatestTimeStamp: 0
-                 },
-                 ConditionExpression : "attribute_not_exists(AssetID)"
-               };
 
-               if (assetobj.CompanyID)
-               {
-                 params.Item["CompanyID"] = assetobj.CompanyID;
-               }
+      params.Item = Object.assign(params.Item, assetobj);
+      delete params.Item['UserID'];
 
-               if (assetobj.DisplayName)
-               {
-                 params.Item["DisplayName"] = assetobj.DisplayName;
-               }
+      shareUtil.awsclient.put(params, function(err, data) {
+        if (err) {
+            var msg = "Error:" + JSON.stringify(err, null, 2);
+            console.error(msg);
+            shareUtil.SendInternalErr(res,msg);
+        }else{
+            userManage.updateUserAsset(assetobj.UserID, assetID, function(ret1, data){
+                if (ret1){
+                  shareUtil.SendSuccess(res);
+                }
+                else{
+                  var msg = "Error:" + JSON.stringify(data);
+                  shareUtil.SendInternalErr(res,msg);
+                }
 
-               if (assetobj.VerificationCode)
-               {
-                 params.Item["VerificationCode"] = assetobj.VerificationCode;
-               }
+            });
 
-               shareUtil.awsclient.put(params, function(err, data) {
-                 if (err) {
-                     isValid = false;
-                 }else{
-                   var msg = {
-                     message: "Success"
-                   };
-                   console.log("asset added!");
-                   res.status(200).send(msg);
-                 }
-               });
-
-             }
-             else {
-               var errmsg = {
-                 message: "Item Already Exists"
-               };
-               console.log(errmsg);
-               res.status(400).send(errmsg);
-             }
-
-           }
-       }
-
+        }
+      });
 
 
     }
   }
 
-  if (!isValid)
-  {
-    var errmsg = {
-      message: "Invalid Input"
-    };
-    console.log(errmsg);
-    res.status(400).send(errmsg);
-  }
 
 
   // this sends back a JSON response which is a single string

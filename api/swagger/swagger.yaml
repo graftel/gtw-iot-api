@@ -65,11 +65,13 @@ paths:
           description: Success
           schema:
             type: object
-            properties: 
+            properties:
               Items:
                 type: array
                 items:
-                   $ref: "#/definitions/AssetModel"
+                  $ref: "#/definitions/AssetModel"
+              Count:
+                type: integer
         # responses may fall through to errors
         400:
           description: Invaid Input
@@ -745,8 +747,8 @@ definitions:
   AssetModel:
     type: object
     properties:
-      UserID: 
-        type: string 
+      UserID:
+        type: string
       AssetID:
         type: string
       AddTimeStamp:
@@ -755,8 +757,6 @@ definitions:
         type: string
       LastestTimeStamp:
         type: integer
-      VerificationCode:
-        type: string
   LogInModel:
     type: object
     properties:
