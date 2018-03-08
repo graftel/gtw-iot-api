@@ -189,7 +189,7 @@ function addDevice(req, res) {
     IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret,data){
       if (ret) {
         var msg = "Serial Number Already Exists";
-        shareUtil.SendInvalidInput(res, msg); 
+        shareUtil.SendInvalidInput(res, msg);
       } else {
         addDeviceInternal(deviceobj, res);
       }
@@ -321,7 +321,7 @@ function deleteDevice(req, res) {
 
 }
 
-function getDevice(req, res) {
+/*function getDevice(req, res) {
   var assetID = req.swagger.params.AssetID.value;
   var Params = {
      TableName : shareUtil.tables.deviceConfig,
@@ -345,7 +345,90 @@ function getDevice(req, res) {
 
        }
    }
+}*/
+
+function getDevice(req, res) {
+  var assetid = req.swagger.params.AssetID.value;
+  var devicesParams = {
+    TableName : shareUtil.tables.assets,
+    KeyConditionExpression : "AssetID = :V1",
+    ExpressionAttributeValues :  { ':V1' : assetid},
+    ProjectionExpression : "Devices"
+  };
+  shareUtil.awsclient.query(devicesParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res, msg);
+    } else {
+      var sendData = {
+        Items: [],
+        Count: 0
+      };
+      if (data.Count == 0)
+      {
+        shareUtil.SendSuccessWithData(res, sendData);
+      }
+      else {
+        var devices = data.Items[0].Devices;
+
+        if (typeof devices == "undefined")
+        {
+          shareUtil.SendSuccessWithData(res, sendData);
+        }
+        else {
+          if (devices.length == 0) {
+            shareUtil.SendSuccessWithData(res, sendData);
+          }
+          else {
+            console.log("devices: " + devices);
+            getSingleDeviceInternal(0, devices, null, function(devicesdata){
+              sendData.Items = devicesdata;
+              sendData.Count = devicesdata.length;
+              shareUtil.SendSuccessWithData(res, sendData);
+            });
+          }
+        }
+      }
+    }
+  }
 }
+
+
+function getSingleDeviceInternal(index, devices, deviceout, callback) {
+  if (index < devices.length){
+    if (index == 0)
+    {
+      deviceout = [];
+    }
+
+  console.log("devices.Items[0]: " + devices[index]);
+    var devicesParams = {
+      TableName : shareUtil.tables.device,
+      KeyConditionExpression : "DeviceID = :v1",
+      ExpressionAttributeValues : { ':v1' : devices[index]}
+    };
+    shareUtil.awsclient.query(devicesParams, onQuery);
+    function onQuery(err, data) {
+      if (!err) {
+        console.log("no error");
+        console.log("data.count = " + data.Count);
+        if (data.Count == 1)
+        {
+          deviceout.push(data.Items[0]);
+          console.log("deviceout: " + deviceout);
+        }
+
+      }
+      getSingleDeviceInternal(index + 1, devices, deviceout, callback);
+    }
+  }
+  else{
+    callback(deviceout);
+  }
+}
+
+
 
 function IsDeviceSerialNumberExist(serialNumber, callback) {
 
