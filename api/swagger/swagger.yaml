@@ -520,6 +520,32 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /device/addExistingDeviceBySerialNumber:
+    x-swagger-router-controller: deviceManage
+    post:
+      tags:
+      - device
+      summary: create a new device
+      description: create a new device
+      # used as the method name of the controller
+      operationId: addExistingDeviceBySerialNumber
+      parameters:
+      - in: body
+        name: body
+        description: Device object thats need to be added
+        required: true
+        schema:
+          $ref: '#/definitions/DeviceModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /device/updateDevice:
     x-swagger-router-controller: deviceManage
     put:
@@ -796,17 +822,13 @@ definitions:
     properties:
       DeviceID:
         type: string
-      Type:
+      DisplayName:
         type: string
       AssetID:
         type: string
-      Location:
+      SerialNumber:
         type: string
-      Location_Display:
-        type: string
-      LinkDeviceID:
-        type: string
-      Tag:
+      VerificationCode:
         type: string
   UserSettings:
     type: object

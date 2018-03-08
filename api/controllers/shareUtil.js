@@ -11,14 +11,13 @@ const NOT_EXIST = "Item Not Exist";
 const INTERNAL_ERR = "Internal Error";
 
 var tables = {
-    company: "Hx.Company",
     users: "Hx.Users",
     assets: "Hx.Asset",
-    deviceConfig: "Hx.DeviceConfiguration",
+    device: "Hx.Device",
     rawData: "Hx.RawData",
     calculatedData: "Hx.CalculatedData",
-    alerts: "Hx.Alerts",
-    settings: "Hx.Settings"
+    variable: "Hx.Variable",
+    parameter: "Hx.Parameters"
 };
 
 
@@ -28,7 +27,8 @@ module.exports = {
     INVALID_INPUT: INVALID_INPUT,
     ALREADY_EXIST: ALREADY_EXIST,
     SUCCESS_MSG: SUCCESS_MSG,
-    NOT_EXIST: NOT_EXIST
+    NOT_EXIST: NOT_EXIST,
+    INTERNAL_ERR: INTERNAL_ERR
   },
   awsclient: docClient,
   SendInvalidInput: SendInvalidInput,
