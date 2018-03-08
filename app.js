@@ -1,5 +1,5 @@
 'use strict';
-
+aaa
 var SwaggerExpress = require('swagger-express-mw');
 var app = require('express')();
 var userManage = require('./api/controllers/userManage.js')
