@@ -4,6 +4,8 @@
  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
 */
 
+//test commit
+
 /*
  Modules make it possible to import JavaScript files into your application.  Modules are imported
  using 'require' statements that give you a reference to the module.
