@@ -28,6 +28,8 @@ tags:
   description: retrieve data from database
 - name: device
   description: device info
+- name: variable
+  description: variable info
 - name: user
   description: Operations about user
   externalDocs:
@@ -584,7 +586,119 @@ paths:
       parameters:
       - name: DeviceID
         in: query
-        description: Device object thats need to be deleted
+        description: DeviceID to be deleted
+        required: true
+        type: string
+      - name: AssetID
+        in: query
+        description: device's AssetID
+        required: true
+        type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /variable/getVariable:
+    x-swagger-router-controller: variableManage
+    get:
+      tags:
+      - variable
+      summary: get all varaible
+      description: get all variable by DeviceID
+      # used as the method name of the controller
+      operationId: getVariable
+      parameters:
+      - name: AssetID
+        in: query
+        description: User object thats need to be deleted
+        required: true
+        type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/DeviceModel"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /variable/addVariable:
+    x-swagger-router-controller: variableManage
+    post:
+      tags:
+      - variable
+      summary: create a new variable
+      description: create a new variable
+      # used as the method name of the controller
+      operationId: addvariable
+      parameters:
+      - in: body
+        name: body
+        description: Device object thats need to be added
+        required: true
+        schema:
+          $ref: '#/definitions/DeviceModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /variable/updateVariable:
+    x-swagger-router-controller: variableManage
+    put:
+      tags:
+      - variable
+      summary: update a Variable
+      description: update a Variable
+      # used as the method name of the controller
+      operationId: updateVariable
+      parameters:
+      - in: body
+        name: body
+        description: User object thats need to be updated
+        required: true
+        schema:
+          $ref: '#/definitions/DeviceModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /variable/deleteVariable:
+    x-swagger-router-controller: variableManage
+    delete:
+      tags:
+      - variable
+      summary: delete a Variable
+      description: delete a Variable
+      # used as the method name of the controller
+      operationId: deleteVariable
+      parameters:
+      - name: DeviceID
+        in: query
+        description: DeviceID to be deleted
+        required: true
+        type: string
+      - name: AssetID
+        in: query
+        description: device's AssetID
         required: true
         type: string
       responses:
@@ -822,9 +936,7 @@ definitions:
     properties:
       DeviceID:
         type: string
-      DisplayName:
-        type: string
-      AssetID:
+      AddTimeStamp:
         type: string
       SerialNumber:
         type: string
