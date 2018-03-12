@@ -76,7 +76,7 @@ paths:
                 type: integer
         # responses may fall through to errors
         400:
-          description: Invaid Input
+          description: Invalid Input
           schema:
             $ref: "#/definitions/ErrorResponse"
         404:
@@ -110,7 +110,7 @@ paths:
             $ref: "#/definitions/AssetModel"
         # responses may fall through to errors
         400:
-          description: Invaid Input
+          description: Invalid Input
           schema:
             $ref: "#/definitions/ErrorResponse"
         404:
@@ -133,7 +133,7 @@ paths:
       parameters:
       - in: body
         name: AssetObject
-        description: Asset object thats need to be added into table
+        description: Asset object thats needs to be added into table
         required: true
         schema:
           $ref: '#/definitions/AssetModel'
@@ -158,7 +158,7 @@ paths:
       parameters:
       - in: body
         name: body
-        description: Asset object thats need to be updated
+        description: Asset object thats needs to be updated
         required: true
         schema:
           $ref: '#/definitions/AssetModel'
@@ -490,7 +490,14 @@ paths:
         200:
           description: Success
           schema:
-            $ref: "#/definitions/DeviceModel"
+            type: object
+            properties:
+              Items:
+                type: array
+                items:
+                  $ref: "#/definitions/DeviceModel"
+              Count:
+                type: integer
         # responses may fall through to errors
         default:
           description: Error
@@ -592,7 +599,6 @@ paths:
       - name: AssetID
         in: query
         description: device's AssetID
-        required: true
         type: string
       responses:
         200:
@@ -609,21 +615,28 @@ paths:
     get:
       tags:
       - variable
-      summary: get all varaible
+      summary: get all variable
       description: get all variable by DeviceID
       # used as the method name of the controller
       operationId: getVariable
       parameters:
-      - name: AssetID
+      - name: DeviceID
         in: query
-        description: User object thats need to be deleted
+        description: DeviceID of the variable
         required: true
         type: string
       responses:
         200:
           description: Success
           schema:
-            $ref: "#/definitions/DeviceModel"
+            type: object
+            properties:
+              Items:
+                type: array
+                items:
+                  $ref: "#/definitions/VariableModel"
+              Count:
+                type: integer
         # responses may fall through to errors
         default:
           description: Error
@@ -637,14 +650,14 @@ paths:
       summary: create a new variable
       description: create a new variable
       # used as the method name of the controller
-      operationId: addvariable
+      operationId: addVariable
       parameters:
       - in: body
         name: body
-        description: Device object thats need to be added
+        description: Vairable object thats needs to be added
         required: true
         schema:
-          $ref: '#/definitions/DeviceModel'
+          $ref: '#/definitions/VariableModel'
       responses:
         200:
           description: Success
@@ -667,10 +680,10 @@ paths:
       parameters:
       - in: body
         name: body
-        description: User object thats need to be updated
+        description: Variable object thats needs to be updated
         required: true
         schema:
-          $ref: '#/definitions/DeviceModel'
+          $ref: '#/definitions/VariableModel'
       responses:
         200:
           description: Success
@@ -691,14 +704,14 @@ paths:
       # used as the method name of the controller
       operationId: deleteVariable
       parameters:
-      - name: DeviceID
+      - name: VariableID
         in: query
-        description: DeviceID to be deleted
+        description: VariableID to be deleted
         required: true
         type: string
-      - name: AssetID
+      - name: DeviceID
         in: query
-        description: device's AssetID
+        description: variable's DeviceID
         required: true
         type: string
       responses:
@@ -934,6 +947,8 @@ definitions:
   DeviceModel:
     type: object
     properties:
+      AssetID:
+        type: string
       DeviceID:
         type: string
       AddTimeStamp:
@@ -941,6 +956,23 @@ definitions:
       SerialNumber:
         type: string
       VerificationCode:
+        type: string
+  VariableModel:
+    type: object
+    properties:
+      DeviceID:
+        type: string
+      VariableID:
+        type: string
+      CurrentValue: 
+        type: string
+      VariableName: 
+        type: string
+      VariableTag:
+        type: string
+      VariableType:
+        type: string
+      VariableUnit:
         type: string
   UserSettings:
     type: object
