@@ -1,4 +1,5 @@
 var util = require('util');
+var shareUtil = require('./shareUtil.js');
 var AWS = require("aws-sdk");
 const os = require('os');
 AWS.config.loadFromPath(os.homedir() + '/.aws/config.json');
@@ -56,23 +57,23 @@ function getSingleData(req, res) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
-     SendInternalErr(res,msg);
+     shareUtil.SendInternalErr(res,msg);
    }else{
      console.log(data);
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
-        SendInvalidInput(res,NOT_EXIST);
+        shareUtil.SendInvalidInput(res,NOT_EXIST);
      }
      else if (data.Count == 1)
      {
         var out_data = {'Value' : data.Items[0]["Value"]};
         console.log(out_data);
-        SendSuccessWithData(res, out_data);
+        shareUtil.SendSuccessWithData(res, out_data);
      }
      else {
        var msg = "Error: data count is not 1"
-        SendInternalErr(res,msg);
+        shareUtil.SendInternalErr(res,msg);
      }
 
    }
@@ -97,44 +98,38 @@ function getSingleCalculatedData(req, res) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
-     SendInternalErr(res,msg);
+     shareUtil.SendInternalErr(res,msg);
    }else{
      console.log(data);
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
-        SendInvalidInput(res,NOT_EXIST);
+        shareUtil.SendInvalidInput(res,NOT_EXIST);
      }
      else if (data.Count == 1)
      {
-        SendSuccessWithData(res, data.Items[0]);
+        shareUtil.SendSuccessWithData(res, data.Items[0]);
      }
      else {
        var msg = "Error: data count is not 1"
-        SendInternalErr(res,msg);
+        shareUtil.SendInternalErr(res,msg);
      }
 
    }
    });
-
-
-
-
-
-  // this sends back a JSON response which is a single string
-
+   // this sends back a JSON response which is a single string
 }
 
 function getMultipleData(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  var deviceID = req.swagger.params.DeviceID.value;
+  var variableID = req.swagger.params.VariableID.value;
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
 
    var params = {
      TableName: tables.rawData,
-     KeyConditionExpression : "DeviceID = :v1 and EpochTimeStamp between :v2 and :v3",
-     ExpressionAttributeValues : {':v1' : deviceID.toString(),
+     KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp between :v2 and :v3",
+     ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStampFrom,
                                   ':v3' : dataTimeStampTo}
    };
@@ -143,17 +138,17 @@ function getMultipleData(req, res) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
-     SendInternalErr(res,msg);
+     shareUtil.SendInternalErr(res,msg);
    }else{
      console.log(data);
      if (data.Count == 0)
      {
-       var msg = "Error: Cannot find data"
-        SendInvalidInput(res,NOT_EXIST);
+      var msg = "Error: Cannot find data"
+      shareUtil.SendInvalidInput(res,NOT_EXIST);
      }
      else {
         delete data["ScannedCount"];
-        SendSuccessWithData(res, data);
+        shareUtil.SendSuccessWithData(res, data);
      }
 
    }
@@ -178,17 +173,17 @@ function getMultipleCalculatedData(req, res) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
-     SendInternalErr(res,msg);
+     shareUtil.SendInternalErr(res,msg);
    }else{
      console.log(data);
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
-        SendInvalidInput(res,NOT_EXIST);
+        shareUtil.SendInvalidInput(res,NOT_EXIST);
      }
      else {
         delete data["ScannedCount"];
-        SendSuccessWithData(res, data);
+        shareUtil.SendSuccessWithData(res, data);
      }
 
    }
@@ -201,7 +196,7 @@ function getMultipleCalculatedDataWithParameter(req, res) {
   var assetID = req.swagger.params.AssetID.value;
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
-  var parameter = req.swagger.params.ParameterName.value;
+  var parameterid = req.swagger.params.ParameterID.value;
 
    var params = {
      TableName: tables.calculatedData,
@@ -209,20 +204,19 @@ function getMultipleCalculatedDataWithParameter(req, res) {
      ExpressionAttributeValues : {':v1' : assetID.toString(),
                                   ':v2' : dataTimeStampFrom,
                                   ':v3' : dataTimeStampTo
-                                },
-     ProjectionExpression : parameter.toString() + ",EpochTimeStamp"
+                                }
    };
    console.log(params);
    docClient.query(params, function(err, data) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
-     SendInternalErr(res,msg);
+     shareUtil.SendInternalErr(res,msg);
    }else{
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
-        SendInvalidInput(res,NOT_EXIST);
+        shareUtil.SendInvalidInput(res,NOT_EXIST);
      }
      else {
         console.log(data);
@@ -230,16 +224,27 @@ function getMultipleCalculatedDataWithParameter(req, res) {
         var out_data = {};
         out_data['values'] = [];
         out_data['timestamp'] = [];
-        out_data['parameter'] = parameter;
-        out_data['count'] = data.Count;
+        out_data['parameter'] = parameterid;
+        //out_data['count'] = data.Count;
         for (var i in data.Items)
         {
           var singleData = data.Items[i];
-        //  console.log(singleData);
-          out_data['timestamp'].push(singleData['EpochTimeStamp']);
-          out_data['values'].push(singleData[parameter]);
+          for (var j in singleData.Data)
+          {
+            if (singleData.Data[j].ParamID == parameterid)
+            {
+              out_data['timestamp'].push(singleData['EpochTimeStamp']);
+              out_data['values'].push(singleData.Data[j].Value);
+            }
+          }
+          out_data['count'] = out_data['timestamp'].length;
         }
-        SendSuccessWithData(res, out_data);
+        if (out_data['count'] == 0){
+          shareUtil.SendInvalidInput(res,NOT_EXIST);
+        } else
+        {
+          shareUtil.SendSuccessWithData(res, out_data);
+        }
      }
 
    }
@@ -247,6 +252,8 @@ function getMultipleCalculatedDataWithParameter(req, res) {
   // this sends back a JSON response which is a single string
 }
 
+
+/*
 function SendInvalidInput(res, msg)
 {
   var errmsg = {
@@ -276,4 +283,4 @@ function SendInternalErr(res, msg)
   };
   console.log(errmsg);
   res.status(400).send(errmsg);
-}
+}*/

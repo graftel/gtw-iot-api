@@ -893,7 +893,6 @@ paths:
       parameters:
       - name: AssetID
         in: query
-        description: Asset ID
         required: true
         type: string
       - name: StartTimeStamp
@@ -904,7 +903,7 @@ paths:
         in: query
         required: true
         type: integer
-      - name: ParameterName
+      - name: ParameterID
         in: query
         required: true
         type: string
@@ -924,13 +923,12 @@ paths:
       tags:
       - data
       summary: get multiple data 
-      description:  get multiple data by device id and timestamp
+      description:  get multiple data by variableID and timestamp
       # used as the method name of the controller
       operationId: getMultipleData
       parameters:
-      - name: DeviceID
+      - name: VariableID
         in: query
-        description: Device object thats need to be deleted
         required: true
         type: string
       - name: StartTimeStamp

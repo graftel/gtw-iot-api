@@ -213,14 +213,12 @@ function updateDevice(req, res) {
   var isValid = true;
   console.log(deviceobj);
   if(deviceobj.constructor === Object && Object.keys(deviceobj).length === 0) {
-    SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
     if(!deviceobj.DeviceID)
     {
-      var errmsg = {message: "INVALID_INPUT"};
-      res.status(400).send(errmsg);
-       //SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+      shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
     }
     else {
       // check if asset exists
@@ -234,7 +232,7 @@ function updateDevice(req, res) {
             {
               if (deviceobj.hasOwnProperty(key))
               {
-                if (key != "DeviceID") //&& key != "Type")
+                if (key != "DeviceID")
                 {
                   updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
                   expressvalues[":v" + i.toString()] = deviceobj[key];
@@ -249,8 +247,6 @@ function updateDevice(req, res) {
                   TableName : shareUtil.tables.device,
                   Key : {
                     DeviceID: data.Items[0].DeviceID
-                    //DeviceID : deviceobj.DeviceID.toString()  //,
-                    //Type : data.Items[0].Type
                 },
                 UpdateExpression : updateItems,
                 ExpressionAttributeValues : expressvalues
@@ -275,9 +271,7 @@ function updateDevice(req, res) {
           }
           else {
             console.log("isvalid=false2");
-            //SendInvalidInput(res,NOT_EXIST);
-            var errmsg = {message: "INVALID_INPUT"};
-            res.status(400).send(errmsg);
+            shareUtil.SendInvalidInput(res,shareUtil.NOT_EXIST);
           }
       });
     }
