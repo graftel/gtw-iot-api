@@ -802,9 +802,8 @@ paths:
       # used as the method name of the controller
       operationId: getSingleData
       parameters:
-      - name: DeviceID
+      - name: VariableID
         in: query
-        description: Device object thats need to be deleted
         required: true
         type: string
       - name: TimeStamp
@@ -833,7 +832,6 @@ paths:
       parameters:
       - name: AssetID
         in: query
-        description: Device object thats need to be deleted
         required: true
         type: string
       - name: TimeStamp
@@ -1006,7 +1004,7 @@ definitions:
   DataModel:
     type: object
     properties:
-      DeviceID:
+      VariableID:
         type: string
       EpochTimeStamp:
         type: integer
@@ -1018,6 +1016,8 @@ definitions:
       AssetID:
         type: string
       DeviceID:
+        type: string
+      DisplayName:
         type: string
       AddTimeStamp:
         type: integer
