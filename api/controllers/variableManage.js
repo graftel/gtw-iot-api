@@ -15,7 +15,8 @@ module.exports = {
   addVariable: addVariable,
   updateVariable: updateVariable,
   deleteVariable: deleteVariable,
-  getVariable: getVariable
+  getVariable: getVariable,
+  getVariableParameters: getVariableParameters
 };
 
 
@@ -469,6 +470,38 @@ function getSingleVariableInternal(index, variables, variableout, callback) {
     callback(variableout);
   }
 }
+
+function getVariableParameters(req, res) {
+
+  var variableid = req.swagger.params.VariableID.value;
+
+  var variableParams = {
+    TableName: shareUtil.tables.variable,
+    KeyConditionExpression : "VariableID = :v1",
+    ExpressionAttributeValues : { ':v1' : variableid.toString()}
+  }
+
+  shareUtil.awsclient.query(variableParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg =  "Unable to scan the variable table.(getVariable) Error JSON:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res,msg);
+    }
+    else {
+      if (data.Count == 0)
+      {
+        shareUtil.SendNotFound(res);
+      }
+      else
+      {
+        console.log("data = " + JSON.stringify(data.Items[0], null, 2));
+        shareUtil.SendSuccessWithData(res, data.Items[0]);
+      }
+    }
+  }
+}
+
+
 
 
 

@@ -93,14 +93,14 @@ paths:
     get:
       tags:
       - asset
-      summary: Retrieve list of assets
-      description: Return list of assets by company id
+      summary: Retrieve list of parameters
+      description: Return list of asset's parameters for a given AssetID
       # used as the method name of the controller
       operationId: getSingleAsset
       parameters:
         - name: AssetID
           in: query
-          description: Asset id
+          description: AssetID 
           required: true
           type: string
       responses:
@@ -483,7 +483,7 @@ paths:
       parameters:
       - name: AssetID
         in: query
-        description: User object thats need to be deleted
+        description: AssetID in which the device is
         required: true
         type: string
       responses:
@@ -499,6 +499,40 @@ paths:
               Count:
                 type: integer
         # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /device/getDeviceParameters:
+    # binds a127 app logic to a route
+    x-swagger-router-controller: deviceManage
+    get:
+      tags:
+      - device
+      summary: Retrieve list of parameters
+      description: Return list of device's parameters for a given DeviceID
+      # used as the method name of the controller
+      operationId: getDeviceParameters
+      parameters:
+        - name: DeviceID
+          in: query
+          description: DeviceID 
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/DeviceModel"
+        # responses may fall through to errors
+        400:
+          description: Invalid Input
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: Item not found
+          schema:
+            $ref: "#/definitions/ErrorResponse"
         default:
           description: Error
           schema:
@@ -638,6 +672,40 @@ paths:
               Count:
                 type: integer
         # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /variable/getVariableParameters:
+    # binds a127 app logic to a route
+    x-swagger-router-controller: variableManage
+    get:
+      tags:
+      - variable
+      summary: Retrieve list of parameters
+      description: Return list of variable's parameters for a given VariableID
+      # used as the method name of the controller
+      operationId: getVariableParameters
+      parameters:
+        - name: VariableID
+          in: query
+          description: VariableID 
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/VariableModel"
+        # responses may fall through to errors
+        400:
+          description: Invalid Input
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: Item not found
+          schema:
+            $ref: "#/definitions/ErrorResponse"
         default:
           description: Error
           schema:
@@ -952,7 +1020,7 @@ definitions:
       DeviceID:
         type: string
       AddTimeStamp:
-        type: string
+        type: integer
       SerialNumber:
         type: string
       VerificationCode:

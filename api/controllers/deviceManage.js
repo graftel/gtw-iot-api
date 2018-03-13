@@ -16,7 +16,8 @@ module.exports = {
   addExistingDeviceBySerialNumber: addExistingDeviceBySerialNumber,
   updateDevice: updateDevice,
   deleteDevice: deleteDevice,
-  getDevice: getDevice
+  getDevice: getDevice,
+  getDeviceParameters: getDeviceParameters
 };
 
 function updateDeviceIDInAsset(deviceID, assetID, callback) {
@@ -485,6 +486,38 @@ function getDevice(req, res) {
     }
   }
 }
+
+
+function getDeviceParameters(req, res) {
+
+  var deviceid = req.swagger.params.DeviceID.value;
+
+  var devicesParams = {
+    TableName: shareUtil.tables.device,
+    KeyConditionExpression : "DeviceID = :v1",
+    ExpressionAttributeValues : { ':v1' : deviceid.toString()}
+  }
+
+  shareUtil.awsclient.query(devicesParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg =  "Unable to scan the device table.(getDevice) Error JSON:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res,msg);
+    }
+    else {
+      if (data.Count == 0)
+      {
+        shareUtil.SendNotFound(res);
+      }
+      else
+      {
+        console.log("data = " + JSON.stringify(data.Items[0], null, 2));
+        shareUtil.SendSuccessWithData(res, data.Items[0]);
+      }
+    }
+  }
+}
+
 
 
 function getSingleDeviceInternal(index, devices, deviceout, callback) {
