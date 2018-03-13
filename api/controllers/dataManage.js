@@ -251,36 +251,3 @@ function getMultipleCalculatedDataWithParameter(req, res) {
  });
   // this sends back a JSON response which is a single string
 }
-
-
-/*
-function SendInvalidInput(res, msg)
-{
-  var errmsg = {
-    message: msg
-  };
-  console.log(errmsg);
-  res.status(400).send(errmsg);
-}
-function SendSuccess(res, msg = SUCCESS_MSG)
-{
-  var errmsg = {
-    message: msg
-  };
-  console.log(errmsg);
-  res.status(200).send(errmsg);
-}
-
-function SendSuccessWithData(res, data_out)
-{
-  res.status(200).send(data_out);
-}
-
-function SendInternalErr(res, msg)
-{
-  var errmsg = {
-    message: msg
-  };
-  console.log(errmsg);
-  res.status(400).send(errmsg);
-}*/

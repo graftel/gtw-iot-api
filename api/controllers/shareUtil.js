@@ -17,7 +17,7 @@ var tables = {
     rawData: "Hx.RawData",
     calculatedData: "Hx.CalculatedData",
     variable: "Hx.Variable",
-    parameter: "Hx.Parameters"
+    param: "Hx.Parameters"
 };
 
 

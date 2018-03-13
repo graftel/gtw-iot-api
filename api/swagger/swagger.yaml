@@ -30,6 +30,8 @@ tags:
   description: device info
 - name: variable
   description: variable info
+- name: parameter
+  description: parameter info
 - name: user
   description: Operations about user
   externalDocs:
@@ -792,6 +794,148 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /parameter/getParamByAssetID:
+    x-swagger-router-controller: parameterManage
+    get:
+      tags:
+      - parameter
+      summary: get all parameter
+      description: get all parameter by AssetID
+      # used as the method name of the controller
+      operationId: getParamByAssetID
+      parameters:
+      - name: AssetID
+        in: query
+        required: true
+        type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            type: object
+            properties:
+              Items:
+                type: array
+                items:
+                  $ref: "#/definitions/ParameterModel"
+              Count:
+                type: integer
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /parameter/getParamAttributes:
+    # binds a127 app logic to a route
+    x-swagger-router-controller: parameterManage
+    get:
+      tags:
+      - parameter
+      summary: Retrieve list of attributes
+      description: Return list of variable's attributes for a given ParamID
+      # used as the method name of the controller
+      operationId: getParamAttributes
+      parameters:
+        - name: ParamID
+          in: query
+          required: true
+          type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/ParameterModel"
+        # responses may fall through to errors
+        400:
+          description: Invalid Input
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        404:
+          description: Item not found
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /parameter/addParam:
+    x-swagger-router-controller: parameterManage
+    post:
+      tags:
+      - parameter
+      summary: create a new parameter
+      description: create a new variable
+      # used as the method name of the controller
+      operationId: addParam
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/ParameterModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /parameter/updateParam:
+    x-swagger-router-controller: parameterManage
+    put:
+      tags:
+      - parameter
+      summary: update a Parameter
+      description: update a Parameter's attributes
+      # used as the method name of the controller
+      operationId: updateParam
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/ParameterModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /parameter/deleteParam:
+    x-swagger-router-controller: parameterManage
+    delete:
+      tags:
+      - parameter
+      summary: delete a Parameter
+      description: delete a Parameter with its ParamID and AssetID
+      # used as the method name of the controller
+      operationId: deleteParam
+      parameters:
+      - name: ParamID
+        in: query
+        required: true
+        type: string
+      - name: AssetID
+        in: query
+        required: true
+        type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /data/getSingleData:
     x-swagger-router-controller: dataManage
     get:
@@ -1022,6 +1166,19 @@ definitions:
       SerialNumber:
         type: string
       VerificationCode:
+        type: string
+  ParameterModel:
+    type: object
+    properties:
+      ParamID:
+        type: string
+      AssetID:
+        type: string
+      DisplayName:
+        type: string
+      ParamEquation:
+        type: string
+      Unit:
         type: string
   VariableModel:
     type: object
