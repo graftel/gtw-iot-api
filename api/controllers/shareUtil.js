@@ -7,7 +7,7 @@ var docClient = new AWS.DynamoDB.DocumentClient();
 const INVALID_INPUT = "Invalid Input";
 const ALREADY_EXIST = "Item Already Exist";
 const SUCCESS_MSG = "Success";
-const NOT_EXIST = "Item Not Exist";
+const NOT_EXIST = "Item Does Not Exist";
 const INTERNAL_ERR = "Internal Error";
 
 var tables = {

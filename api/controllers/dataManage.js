@@ -42,13 +42,13 @@ module.exports = {
 
 function getSingleData(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  var deviceID = req.swagger.params.DeviceID.value;
+  var variableID = req.swagger.params.VariableID.value;
   var dataTimeStamp = req.swagger.params.TimeStamp.value;
 
    var params = {
      TableName: tables.rawData,
-     KeyConditionExpression : "DeviceID = :v1 and EpochTimeStamp = :v2",
-     ExpressionAttributeValues : {':v1' : deviceID.toString(),
+     KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp = :v2",
+     ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStamp}
    };
    console.log(params)
@@ -77,11 +77,6 @@ function getSingleData(req, res) {
 
    }
    });
-
-
-
-
-
   // this sends back a JSON response which is a single string
 
 }

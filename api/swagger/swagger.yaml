@@ -568,8 +568,8 @@ paths:
     post:
       tags:
       - device
-      summary: create a new device
-      description: create a new device
+      summary: add an existing device to asset
+      description: add an existing device to asset by Serial Number, AssetID and Verification Code
       # used as the method name of the controller
       operationId: addExistingDeviceBySerialNumber
       parameters:

@@ -33,15 +33,14 @@ function updateDeviceIDInAsset(deviceID, assetID, callback) {
           Key : {
             AssetID : assetID,
                 },
-        UpdateExpression : 'set #device = list_append(if_not_exists(#device, :empty_list), :id)',
-        ExpressionAttributeNames: {
+          UpdateExpression : 'set #device = list_append(if_not_exists(#device, :empty_list), :id)',
+          ExpressionAttributeNames: {
             '#device': 'Devices'
           },
-        ExpressionAttributeValues: {
-          ':id': [deviceID],
-          ':empty_list': []
-        }
-
+          ExpressionAttributeValues: {
+            ':id': [deviceID],
+            ':empty_list': []
+          }
         };
 
         shareUtil.awsclient.update(updateParams, function (err, data) {
@@ -108,13 +107,13 @@ function addExistingDeviceBySerialNumber(req, res) {
   console.log(deviceobj);
   if(deviceobj.constructor === Object && Object.keys(deviceobj).length === 0) {
     console.log("is valid = false0");
-    SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
     if(!deviceobj.AssetID || !deviceobj.SerialNumber || !deviceobj.VerificationCode)
     {
       console.log("is valid = false1");
-       SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
     }
     else {
 
@@ -132,10 +131,10 @@ function addExistingDeviceBySerialNumber(req, res) {
             });
           }
           else {
-            SendInvalidInput(res,"Wrong VerificationCode");
+            shareUtil.SendInvalidInput(res,"Wrong VerificationCode");
           }
         } else {
-          SendInvalidInput(res,"Serial Number Not exist");
+          shareUtil.SendInvalidInput(res,"Serial Number Not exist");
         }
       });
     }
@@ -563,11 +562,14 @@ function IsDeviceSerialNumberExist(serialNumber, callback) {
      FilterExpression : "SerialNumber = :v1",
      ExpressionAttributeValues : {':v1' : serialNumber.toString()}
   };
-  shareUtil.awsclient.scan(Params, onScan);
-  function onScan(err, data) {
+  shareUtil.awsclient.scan(Params, onQuery);
+  function onQuery(err, data) {
        if (err) {
            var msg = "Error:" + JSON.stringify(err, null, 2);
-           SendInternalErr(res,msg);
+           shareUtil.SendInternalErr(res, msg);
+           var errmsg = { message: msg };
+           //res.status(400).send(errmsg);
+           console.log("error msg :" + msg);
        } else {
          if (data.Count == 0)
          {
