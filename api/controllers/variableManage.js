@@ -260,94 +260,126 @@ function deleteVariable(req, res) {
   {
     if (ret1)
     {
-      // 1st -> get index of variable to delete
-      var devicesParams = {
-        TableName : shareUtil.tables.device,
-        KeyConditionExpression : "DeviceID = :V1",
-        ExpressionAttributeValues :  { ':V1' : deviceID},
-        ProjectionExpression : "Variables"
-      };
-      shareUtil.awsclient.query(devicesParams, onQuery);
-      function onQuery(err, data)
-      {
-        if (err)
+      if (typeof deviceID == "undefined")
+      {   // in case we want to delete a Variable that is not in any Device
+        var deleteParams = {
+          TableName : shareUtil.tables.variable,
+          Key : { VariableID : variableID }
+        };
+        console.log(deleteParams);
+        shareUtil.awsclient.delete(deleteParams, onDelete);
+        function onDelete(err, data)
         {
-        var msg = "Error:" + JSON.stringify(err, null, 2);
-        shareUtil.SendInternalErr(res, msg);
-        } else
-        {
-          if (data.Count == 0)
+          if (err) {
+            var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+            console.error(msg);
+            var errmsg = { message: msg };
+            res.status(500).send(errmsg);
+          } else
           {
-            var errmsg = {message: "DeviceID does not exist or Device does not contain any Variable"};
-            res.status(400).send(errmsg);
+            var msg = { message: "Success" };
+            console.log("device deleted!");
+            res.status(200).send(msg);
           }
-          else
+        }
+      }
+      else
+      {
+        // 1st -> get index of variable to delete
+        var devicesParams = {
+          TableName : shareUtil.tables.device,
+          KeyConditionExpression : "DeviceID = :V1",
+          ExpressionAttributeValues :  { ':V1' : deviceID},
+          ProjectionExpression : "Variables"
+        };
+        shareUtil.awsclient.query(devicesParams, onQuery);
+        function onQuery(err, data)
+        {
+          if (err)
           {
-            // find index of device in devices list coming from the result of the query in the Asset table
-            var variables = data.Items[0].Variables;
-            var variableIndex;
-            var index = 0;
-            if ( typeof variables == "undefined")
+            var msg = "Error:" + JSON.stringify(err, null, 2);
+            shareUtil.SendInternalErr(res, msg);
+          } else
+          {
+            if (data.Count == 0)
             {
-              console.log("undefined");
               var errmsg = {message: "DeviceID does not exist or Device does not contain any Variable"};
               res.status(400).send(errmsg);
             }
             else
             {
-              while (index < variables.length)
+              // find index of device in devices list coming from the result of the query in the Asset table
+              var variables = data.Items[0].Variables;
+              var variableIndex;
+              var index = 0;
+              if ( typeof variables == "undefined")
               {
-                console.log("variables.Items[0]: " + variables[index]);
-                if (variables[index] == variableID)
+                console.log("undefined");
+                var errmsg = {message: "DeviceID does not exist or Device does not contain any Variable"};
+                res.status(400).send(errmsg);
+              }
+              else
+              {
+                while (index < variables.length)
                 {
-                  variableIndex = index;
-                  index  = variables.length;
-                } else
-                {
-                  index +=1;
+                  console.log("variables.Items[0]: " + variables[index]);
+                  if (variables[index] == variableID)
+                  {
+                    variableIndex = index;
+                    index  = variables.length;
+                  } else
+                  {
+                    index +=1;
+                  }
                 }
               }
             }
-          }
-          if (index > 0)
-          {  // to make sure the update is made after the deviceIndex is found
-            console.log("variable.index = " + variableIndex);
-            var updateExpr = "remove Variables[" + variableIndex + "]";
-            var updateDevice = {
-              TableName : shareUtil.tables.device,
-              Key : {DeviceID : deviceID},
-              UpdateExpression : updateExpr
-              //ExpressionAttributeValues : { ':V1' : deviceIndex}
-            };
-            shareUtil.awsclient.update(updateDevice, onUpdate);
-            function onUpdate(err, data)
+            if (index > 0)  // to make sure the update is made after the variableIndex is found
             {
-              if (err)
-              {
-                var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-                console.error(msg);
-                var errmsg = { message: msg };
-                res.status(500).send(errmsg);
+              if (typeof variableIndex == "undefined"){
+                var msg = "Variable not found in Device's list of Variables";
+                shareUtil.SendNotFound(res, msg);
               } else
               {
-                var deleteParams = {
-                  TableName : shareUtil.tables.variable,
-                  Key : { VariableID : variableID }
+                console.log("variable.index = " + variableIndex);
+                var updateExpr = "remove Variables[" + variableIndex + "]";
+                var updateDevice = {
+                  TableName : shareUtil.tables.device,
+                  Key : {DeviceID : deviceID},
+                  UpdateExpression : updateExpr
+                  //ExpressionAttributeValues : { ':V1' : deviceIndex}
                 };
-                console.log(deleteParams);
-                shareUtil.awsclient.delete(deleteParams, onDelete);
-                function onDelete(err, data)
+                shareUtil.awsclient.update(updateDevice, onUpdate);
+                function onUpdate(err, data)
                 {
-                  if (err) {
-                    var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+                  if (err)
+                  {
+                    var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
                     console.error(msg);
                     var errmsg = { message: msg };
                     res.status(500).send(errmsg);
                   } else
                   {
-                    var msg = { message: "Success" };
-                    console.log("variable deleted!");
-                    res.status(200).send(msg);
+                    var deleteParams = {
+                      TableName : shareUtil.tables.variable,
+                      Key : { VariableID : variableID }
+                    };
+                    console.log(deleteParams);
+                    shareUtil.awsclient.delete(deleteParams, onDelete);
+                    function onDelete(err, data)
+                    {
+                      if (err) {
+                        var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+                        console.error(msg);
+                        var errmsg = { message: msg };
+                        res.status(500).send(errmsg);
+                      } else
+                      {
+                        var msg = { message: "Success" };
+                        console.log("variable deleted!");
+                        res.status(200).send(msg);
+                      }
+                    }
                   }
                 }
               }

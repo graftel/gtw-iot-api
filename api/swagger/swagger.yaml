@@ -173,6 +173,52 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /asset/deleteDeviceFromAsset:
+    x-swagger-router-controller: asset
+    put:
+      tags:
+      - asset
+      description: Delete a device from Asset's list of Devices by AssetID and DeviceID
+      # used as the method name of the controller
+      operationId: deleteDeviceFromAsset
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateAssetModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /asset/deleteParamFromAsset:
+    x-swagger-router-controller: asset
+    put:
+      tags:
+      - asset
+      description: Delete a Parameter from Asset's list of Parameters by AssetID and ParamID
+      # used as the method name of the controller
+      operationId: deleteParamFromAsset
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateAssetModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /asset/deleteAsset:
     x-swagger-router-controller: asset
     delete:
@@ -924,7 +970,7 @@ paths:
         type: string
       - name: AssetID
         in: query
-        required: true
+        required: false
         type: string
       responses:
         200:
@@ -1118,6 +1164,15 @@ definitions:
         type: string
       LastestTimeStamp:
         type: integer
+  UpdateAssetModel:
+    type: object
+    properties:
+      AssetID:
+        type: string
+      DeviceID:
+       type: string
+      ParamID:
+       type: string
   LogInModel:
     type: object
     properties:

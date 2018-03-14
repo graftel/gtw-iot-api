@@ -292,7 +292,8 @@ function deleteDevice(req, res) {
   {
     if (ret1)
     {
-      if (typeof assetID == "undefined"){   // in case we want to delete a Device that is not in any Asset
+      if (typeof assetID == "undefined")
+      {   // in case we want to delete a Device that is not in any Asset
         var deleteParams = {
           TableName : shareUtil.tables.device,
           Key : { DeviceID : deviceID }
@@ -314,7 +315,8 @@ function deleteDevice(req, res) {
           }
         }
       }
-      else {
+      else
+      {
       console.log("assetID = " + assetID);
       // 1st -> get index of device to delete
       var assetsParams = {
@@ -356,45 +358,53 @@ function deleteDevice(req, res) {
               }
             }
           }
-          if (index > 0)
-          {  // to make sure the update is made after the deviceIndex is found
-            console.log("device.index = " + deviceIndex);
-            var updateExpr = "remove Devices[" + deviceIndex + "]";
-            var updateAsset = {
-              TableName : shareUtil.tables.assets,
-              Key : {AssetID : assetID},
-              UpdateExpression : updateExpr
-              //ExpressionAttributeValues : { ':V1' : deviceIndex}
-            };
-            shareUtil.awsclient.update(updateAsset, onUpdate);
-            function onUpdate(err, data)
+          if (index > 0)  // to make sure the update is made after the deviceIndex is found
+          {
+            if ( typeof deviceIndex == "undefined")
             {
-              if (err)
-              {
-                var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-                console.error(msg);
-                var errmsg = { message: msg };
-                res.status(500).send(errmsg);
-              } else
-              {
-                var deleteParams = {
-                  TableName : shareUtil.tables.device,
-                  Key : { DeviceID : deviceID }
-                };
-                console.log(deleteParams);
-                shareUtil.awsclient.delete(deleteParams, onDelete);
-                function onDelete(err, data)
-                {
-                  if (err) {
-                    var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-                    console.error(msg);
-                    var errmsg = { message: msg };
-                    res.status(500).send(errmsg);
-                  } else
-                  {
-                    var msg = { message: "Success" };
-                    console.log("device deleted!");
-                    res.status(200).send(msg);
+              var msg = "Device not found in Asset's list of Devices";
+              shareUtil.SendNotFound(res, msg);
+            } else
+            {
+             console.log("device.index = " + deviceIndex);
+             var updateExpr = "remove Devices[" + deviceIndex + "]";
+             var updateAsset = {
+               TableName : shareUtil.tables.assets,
+               Key : {AssetID : assetID},
+               UpdateExpression : updateExpr
+               //ExpressionAttributeValues : { ':V1' : deviceIndex}
+             };
+             shareUtil.awsclient.update(updateAsset, onUpdate);
+             function onUpdate(err, data)
+             {
+               if (err)
+               {
+                 var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+                 console.error(msg);
+                 var errmsg = { message: msg };
+                 res.status(500).send(errmsg);
+               } else
+               {
+                 var deleteParams = {
+                   TableName : shareUtil.tables.device,
+                   Key : { DeviceID : deviceID }
+                 };
+                 console.log(deleteParams);
+                 shareUtil.awsclient.delete(deleteParams, onDelete);
+                 function onDelete(err, data)
+                 {
+                   if (err)
+                    {
+                     var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+                     console.error(msg);
+                     var errmsg = { message: msg };
+                     res.status(500).send(errmsg);
+                    } else
+                    {
+                     var msg = { message: "Success" };
+                     console.log("device deleted!");
+                     res.status(200).send(msg);
+                    }
                   }
                 }
               }
@@ -468,15 +478,95 @@ function getDevice(req, res) {
           {
             console.log("devices: " + devices);
             console.log("devices.length = " + devices.length);
-            getSingleDeviceInternal(0, devices, null, function(devicesdata){
+            var devicesToDelete = [];
+            var deleteIndex = 0;
+            getSingleDeviceInternal(0, devices, assetid, devicesToDelete, deleteIndex, null, function(devicesdata, devicesToDelete){
+              console.log("devicesToDelete -> " + devicesToDelete);
               sendData.Items = devicesdata;
               sendData.Count = devicesdata.length;
-              shareUtil.SendSuccessWithData(res, sendData);
+              deleteGarbageDevices(sendData, assetid, devicesToDelete, function(sendData){
+                shareUtil.SendSuccessWithData(res, sendData);
+              });
             });
           }
         }
       }
     }
+  }
+}
+
+
+
+function deleteGarbageDevices(sendData, assetid, devicesToDelete, callback) {
+
+  var updateExpr = "remove ";
+  for (var k in devicesToDelete)
+  {
+    updateExpr = updateExpr + "Devices[" + devicesToDelete[k] + "], ";
+  }
+
+  console.log("updateExpr = " + updateExpr);
+  var updateAsset = {
+    TableName : shareUtil.tables.assets,
+    Key : {AssetID : assetid},
+    UpdateExpression : updateExpr.slice(0, -2)        // slice to delete ", " at the end of updateExpr
+  };
+  shareUtil.awsclient.update(updateAsset, onUpdate);
+  function onUpdate(err, data)
+  {
+    if (err)
+    {
+      var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      console.error(msg);
+      var errmsg = { message: msg };
+    } else
+    {
+      console.log("devices deleted from Asset list of Devices!");
+      callback(sendData);
+    }
+  }
+}
+
+
+
+function getSingleDeviceInternal(index, devices, assetid, devicesToDelete, deleteIndex, deviceout, callback) {
+  if (index < devices.length)
+  {
+    if (index == 0)
+    {
+      deviceout = [];
+    }
+    console.log("devices.Items[0]: " + devices[index]);
+    var devicesParams = {
+      TableName : shareUtil.tables.device,
+      KeyConditionExpression : "DeviceID = :v1",
+      ExpressionAttributeValues : { ':v1' : devices[index]}
+    };
+    shareUtil.awsclient.query(devicesParams, onQuery);
+    function onQuery(err, data)
+    {
+      if (!err)
+      {
+        console.log("no error");
+        console.log("data.count = " + data.Count);
+        if (data.Count == 1)
+        {
+          deviceout.push(data.Items[0]);
+        //  console.log("deviceout: " + JSON.stringify(deviceout, null, 2));
+        }
+        else
+        {
+          devicesToDelete[deleteIndex] = index;
+          console.log("devices[index] -> " + devices[index]);
+          deleteIndex+= 1;
+        }
+      }
+      getSingleDeviceInternal(index + 1, devices, assetid, devicesToDelete, deleteIndex, deviceout, callback);
+    }
+  }
+  else
+  {
+    callback(deviceout, devicesToDelete);
   }
 }
 
@@ -511,41 +601,6 @@ function getDeviceParameters(req, res) {
   }
 }
 
-
-
-function getSingleDeviceInternal(index, devices, deviceout, callback) {
-  if (index < devices.length)
-  {
-    if (index == 0)
-    {
-      deviceout = [];
-    }
-    console.log("devices.Items[0]: " + devices[index]);
-    var devicesParams = {
-      TableName : shareUtil.tables.device,
-      KeyConditionExpression : "DeviceID = :v1",
-      ExpressionAttributeValues : { ':v1' : devices[index]}
-    };
-    shareUtil.awsclient.query(devicesParams, onQuery);
-    function onQuery(err, data) {
-      if (!err)
-      {
-        console.log("no error");
-        console.log("data.count = " + data.Count);
-        if (data.Count == 1)
-        {
-          deviceout.push(data.Items[0]);
-          console.log("deviceout: " + deviceout);
-        }
-      }
-      getSingleDeviceInternal(index + 1, devices, deviceout, callback);
-    }
-  }
-  else
-  {
-    callback(deviceout);
-  }
-}
 
 
 

@@ -30,7 +30,9 @@ module.exports = {
   addAsset: addAsset,
   updateAsset: updateAsset,
   deleteAsset: deleteAsset,
-  IsAssetExist: IsAssetExist
+  IsAssetExist: IsAssetExist,
+  deleteDeviceFromAsset: deleteDeviceFromAsset,
+  deleteParamFromAsset: deleteParamFromAsset
 };
 
 /*
@@ -327,11 +329,183 @@ function updateAsset(req, res) {
       res.status(400).send(errmsg);
     }
   }
-
-
   // this sends back a JSON response which is a single string
 
 }
+
+
+function deleteDeviceFromAsset(req, res) {
+
+  var assetobj = req.body;
+  var assetid = assetobj.AssetID;
+  var deviceid = assetobj.DeviceID;
+
+  // 1st -> get index of device to delete
+  var assetsParams = {
+    TableName : shareUtil.tables.assets,
+    KeyConditionExpression : "AssetID = :V1",
+    ExpressionAttributeValues :  { ':V1' : assetid},
+    ProjectionExpression : "Devices"
+  };
+  shareUtil.awsclient.query(assetsParams, onQuery);
+  function onQuery(err, data)
+  {
+    if (err)
+    {
+    var msg = "Error:" + JSON.stringify(err, null, 2);
+    shareUtil.SendInternalErr(res, msg);
+    } else
+    {
+      if (data.Count == 0)
+      {
+        var errmsg = {message: "AssetID does not exist or Asset does not contain any Device"};
+        res.status(400).send(errmsg);
+      }
+      else
+      {
+        // find index of device in devices list coming from the result of the query in the Asset table
+        var devices = data.Items[0].Devices;
+        var deviceIndex;
+        var index = 0;
+        while (index < devices.length)
+        {
+          console.log("devices.Items[0]: " + devices[index]);
+          if (devices[index] == deviceid)
+          {
+            deviceIndex = index;
+            index  = devices.length;
+          } else
+          {
+            index +=1;
+          }
+        }
+      }
+      if (index > 0)
+      {  // to make sure the update is made after the deviceIndex is found
+        console.log("device.index = " + deviceIndex);
+        var updateExpr = "remove Devices[" + deviceIndex + "]";
+        var updateAsset = {
+          TableName : shareUtil.tables.assets,
+          Key : {AssetID : assetid},
+          UpdateExpression : updateExpr
+          //ExpressionAttributeValues : { ':V1' : deviceIndex}
+        };
+        shareUtil.awsclient.update(updateAsset, onUpdate);
+        function onUpdate(err, data)
+        {
+          if (err)
+          {
+            var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+            console.error(msg);
+            var errmsg = { message: msg };
+            res.status(500).send(errmsg);
+          } else
+          {
+            var msg = { message: "Success" };
+            console.log("device deleted from Asset!");
+            res.status(200).send(msg);
+          }
+        }
+      }
+    }
+  }
+}
+
+
+function deleteParamFromAsset(req, res) {
+
+  var assetobj = req.body;
+  var assetid = assetobj.AssetID;
+  var paramid = assetobj.ParamID;
+
+  // 1st -> get index of device to delete
+  var assetsParams = {
+    TableName : shareUtil.tables.assets,
+    KeyConditionExpression : "AssetID = :V1",
+    ExpressionAttributeValues :  { ':V1' : assetid},
+    ProjectionExpression : "#param",
+    ExpressionAttributeNames : { '#param' : 'Parameters'}
+  };
+  shareUtil.awsclient.query(assetsParams, onQuery);
+  function onQuery(err, data)
+  {
+    if (err)
+    {
+    var msg = "Error:" + JSON.stringify(err, null, 2);
+    shareUtil.SendInternalErr(res, msg);
+    } else
+    {
+      console.log(JSON.stringify(assetsParams, null ,2));
+      if (data.Count == 0)
+      {
+        var errmsg = {message: "AssetID does not exist or Asset does not contain any Parameter"};
+        res.status(400).send(errmsg);
+      }
+      else
+      {
+        // find index of device in devices list coming from the result of the query in the Asset table
+        var param = data.Items[0].Parameters;
+        var paramIndex;
+        var index = 0;
+        if ( typeof param == "undefined"){
+        //  var errmsg = {message: "Asset does not contain any Param"};
+          //res.status(400).send(errmsg);
+          var msg = "Asset does not contain any Param";
+          shareUtil.SendNotFound(res, msg);
+        }
+        else
+        {
+          while (index < param.length)
+          {
+            console.log("param.Items[0]: " + param[index]);
+            if (param[index] == paramid)
+            {
+              paramIndex = index;
+              index  = param.length;
+            } else
+            {
+              index +=1;
+            }
+          }
+        }
+      }
+      if (index > 0)
+      {  // to make sure the update is made after the deviceIndex is found
+        console.log("param.index = " + paramIndex);
+        var updateExpr = "remove #param[" + paramIndex + "]";
+        var updateAsset = {
+          TableName : shareUtil.tables.assets,
+          Key : {AssetID : assetid},
+          UpdateExpression : updateExpr,
+          ExpressionAttributeNames : { '#param' : 'Parameters'}
+          //ExpressionAttributeValues : { ':V1' : deviceIndex}
+        };
+        shareUtil.awsclient.update(updateAsset, onUpdate);
+        function onUpdate(err, data)
+        {
+          if (err)
+          {
+            var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+            console.error(msg);
+            var errmsg = { message: msg };
+            res.status(500).send(errmsg);
+          } else
+          {
+            var msg = { message: "Success" };
+            console.log("Parameter deleted from Asset!");
+            res.status(200).send(msg);
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
 
 function deleteAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}

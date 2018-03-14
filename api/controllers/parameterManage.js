@@ -296,7 +296,8 @@ function deleteParam(req, res) {
   {
     if (ret1)
     {
-      if (typeof assetID == "undefined"){   // in case we want to delete a Param that is not in any Asset
+      if (typeof assetID == "undefined")
+      {   // in case we want to delete a Param that is not in any Asset
         var deleteParams = {
           TableName : shareUtil.tables.param,
           Key : { ParamID : paramID }
@@ -318,7 +319,8 @@ function deleteParam(req, res) {
           }
         }
       }
-      else {
+      else
+      {
       console.log("assetID = " + assetID);
       // 1st -> get index of param to delete
       var assetsParams = {
@@ -337,6 +339,7 @@ function deleteParam(req, res) {
         shareUtil.SendInternalErr(res, msg);
         } else
         {
+          console.log("else entered");
           if (data.Count == 0)
           {
             var msg = "AssetID does not exist";
@@ -344,11 +347,12 @@ function deleteParam(req, res) {
           }
           else
           {
+            console.log("else 2 entered");
             // find index of param in params list coming from the result of the query in the Asset table
             var param = data.Items[0].Parameters;
             var paramIndex;
             var index = 0;
-            if ( typeof param == "undefined"){
+            if ( typeof param == "undefined" || param.length == 0){
             //  var errmsg = {message: "Asset does not contain any Param"};
               //res.status(400).send(errmsg);
               var msg = "Asset does not contain any Param";
@@ -356,6 +360,8 @@ function deleteParam(req, res) {
             }
             else
             {
+              console.log("else 3 entered");
+              console.log("param.length = " + param.length);
               while (index < param.length)
               {
                 console.log("param.Items[0]: " + param[index]);
