@@ -225,6 +225,7 @@ function updateParam(req, res) {
           if (ret1) {
             var updateItems = "set ";
             var expressvalues = {};
+            var expressnames = {};
 
             var i = 0
             for (var key in paramobj)
@@ -233,8 +234,11 @@ function updateParam(req, res) {
               {
                 if (key != "ParamID")
                 {
-                  updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
+                  //updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
+
                   expressvalues[":v" + i.toString()] = paramobj[key];
+                  expressnames["#n" + i.toString()] = key.toString();
+                  updateItems = updateItems + "#n" + i.toString() + " = :v" + i.toString() + ",";
                   i++;
                 }
               }
@@ -248,7 +252,8 @@ function updateParam(req, res) {
                     ParamID: data.Items[0].ParamID
                 },
                 UpdateExpression : updateItems,
-                ExpressionAttributeValues : expressvalues
+                ExpressionAttributeValues : expressvalues,
+                ExpressionAttributeNames : expressnames
               };
             console.log(updateParams);
             shareUtil.awsclient.update(updateParams, function (err, data) {
@@ -320,7 +325,8 @@ function deleteParam(req, res) {
         TableName : shareUtil.tables.assets,
         KeyConditionExpression : "AssetID = :V1",
         ExpressionAttributeValues :  { ':V1' : assetID},
-        ProjectionExpression : "Params"
+        ProjectionExpression : "#p",
+        ExpressionAttributeNames : {"#p" : "Parameters" }
       };
       shareUtil.awsclient.query(assetsParams, onQuery);
       function onQuery(err, data)
@@ -333,37 +339,46 @@ function deleteParam(req, res) {
         {
           if (data.Count == 0)
           {
-            var errmsg = {message: "AssetID does not exist or Asset does not contain any Param"};
-            res.status(400).send(errmsg);
+            var msg = "AssetID does not exist";
+            shareUtil.SendNotFound(res, msg);
           }
           else
           {
             // find index of param in params list coming from the result of the query in the Asset table
-            var parameters = data.Items[0].Parameters;
+            var param = data.Items[0].Parameters;
             var paramIndex;
             var index = 0;
-            while (index < parameters.length)
+            if ( typeof param == "undefined"){
+            //  var errmsg = {message: "Asset does not contain any Param"};
+              //res.status(400).send(errmsg);
+              var msg = "Asset does not contain any Param";
+              shareUtil.SendNotFound(res, msg);
+            }
+            else
             {
-              console.log("parameters.Items[0]: " + parameters[index]);
-              if (parameters[index] == paramID)
+              while (index < param.length)
               {
-                paramIndex = index;
-                index  = parameters.length;
-              } else
-              {
-                index +=1;
+                console.log("param.Items[0]: " + param[index]);
+                if (param[index] == paramID)
+                {
+                  paramIndex = index;
+                  index  = param.length;
+                } else
+                {
+                  index +=1;
+                }
               }
             }
           }
           if (index > 0)
           {  // to make sure the update is made after the paramIndex is found
             console.log("parameters.index = " + paramIndex);
-            var updateExpr = "remove Parameters[" + paramIndex + "]";
+            var updateExpr = "remove #p[" + paramIndex + "]";
             var updateAsset = {
               TableName : shareUtil.tables.assets,
               Key : {AssetID : assetID},
-              UpdateExpression : updateExpr
-              //ExpressionAttributeValues : { ':V1' : paramIndex}
+              UpdateExpression : updateExpr,
+              ExpressionAttributeNames : {'#p' : 'Parameters'}
             };
             shareUtil.awsclient.update(updateAsset, onUpdate);
             function onUpdate(err, data)
@@ -422,7 +437,8 @@ function getParamByAssetID(req, res) {
     TableName : shareUtil.tables.assets,
     KeyConditionExpression : "AssetID = :V1",
     ExpressionAttributeValues :  { ':V1' : assetid},
-    ProjectionExpression : "Params"
+    ProjectionExpression : "#p",
+    ExpressionAttributeNames : {"#p" : "Parameters" }
   };
   shareUtil.awsclient.query(parametersParams, onQuery);
   function onQuery(err, data)
@@ -440,10 +456,8 @@ function getParamByAssetID(req, res) {
       };
       if (data.Count == 0)
       {
-        var resErr = {ErrorMsg: "AssetID does not exit or Asset does not contain any Param"};
-        console.log(resErr);
-        //shareUtil.SendSuccessWithData(res, sendData);
-        shareUtil.SendSuccessWithData(res, resErr);
+        var msg = "AssetID not found";
+        shareUtil.SendNotFound(res, msg);
       }
       else
       {
@@ -454,15 +468,17 @@ function getParamByAssetID(req, res) {
 
         if (typeof parameters == "undefined")
         {
-          console.log("undefined");
-          shareUtil.SendSuccessWithData(res, sendData);
+          console.log("Error msg : Parameters undefined");
+          msg = "No Parameters found in this Asset";
+          shareUtil.SendNotFound(res, msg);
         }
         else
         {
           if (parameters.length == 0)
           {
-            console.log("length  = 0");
-            shareUtil.SendSuccessWithData(res, sendData);
+            console.log("Error msg: Parameters.length  = 0");
+            msg = "No Parameters found in this Asset";
+            shareUtil.SendNotFound(res, msg);
           }
           else
           {
