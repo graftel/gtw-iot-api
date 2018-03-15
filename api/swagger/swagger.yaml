@@ -1010,6 +1010,40 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /data/addDataByDeviceID:
+    x-swagger-router-controller: dataManage
+    post:
+      tags:
+      - data
+      summary: get a single data 
+      description:  get a single data by device id and timestamp
+      # used as the method name of the controller
+      operationId: addDataByDeviceID
+      parameters:
+      - name: DeviceID
+        in: query
+        type: string
+      - name: body
+        in: body
+        required: true
+        schema: 
+          properties:
+            Data:
+              type: array
+              items: 
+                $ref: '#/definitions/AddDataModel'
+            Timestamp:
+              type: integer
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /data/getSingleCalculatedData:
     x-swagger-router-controller: dataManage
     get:
@@ -1221,6 +1255,13 @@ definitions:
       SerialNumber:
         type: string
       VerificationCode:
+        type: string
+  AddDataModel:
+    type: object
+    properties:
+      VariableName:
+        type: string
+      Value:
         type: string
   ParameterModel:
     type: object

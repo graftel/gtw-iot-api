@@ -127,7 +127,6 @@ function addVariableInternal(variableobj, res) {
   shareUtil.awsclient.put(params, function(err, data) {
     if (err) {
         var msg = "Error:" + JSON.stringify(err, null, 2);
-        console.error(msg);
         shareUtil.SendInternalErr(res,msg);
     }else{
         if (variableobj.DeviceID)
@@ -142,7 +141,8 @@ function addVariableInternal(variableobj, res) {
               }
              });
         }
-        else {
+        else
+        {
           shareUtil.SendSuccess(res);
         }
 

@@ -99,46 +99,6 @@ function checkParamInAsset(paramID, assetID, callback) {
 
 }
 
-/*function addExistingParamBySerialNumber(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  var paramobj = req.body;
-  var isValid = true;
-  console.log(paramobj);
-  if(paramobj.constructor === Object && Object.keys(paramobj).length === 0) {
-    console.log("is valid = false0");
-    shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-  }
-  else {
-    if(!paramobj.AssetID || !paramobj.SerialNumber || !paramobj.VerificationCode)
-    {
-      console.log("is valid = false1");
-       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-    }
-    else {
-
-      IsParamSerialNumberExist(paramobj.SerialNumber, function(ret1, data){
-        if (ret1) {
-          // verify Code
-          if (data.Items[0].VerificationCode === paramobj.VerificationCode) {
-            updateParamIDInAsset(data.Items[0].ParamID, paramobj.AssetID, function(ret2, data){
-                if (ret2){
-                  shareUtil.SendSuccess(res);
-                }
-                else{
-                  shareUtil.SendInvalidInput(res, data);
-                }
-            });
-          }
-          else {
-            shareUtil.SendInvalidInput(res,"Wrong VerificationCode");
-          }
-        } else {
-          shareUtil.SendInvalidInput(res,"Serial Number Not exist");
-        }
-      });
-    }
-  }
-}*/
 
 function addParamInternal(paramobj, res) {
   var uuidv1 = require('uuid/v1');
