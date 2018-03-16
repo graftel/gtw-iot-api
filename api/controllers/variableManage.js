@@ -400,7 +400,7 @@ function deleteVariable(req, res) {
 }
 
 
-
+// get list of Variable by DeviceID
 function getVariable(req, res) {
   var deviceid = req.swagger.params.DeviceID.value;
   var variablesParams = {
@@ -456,10 +456,21 @@ function getVariable(req, res) {
           {
             console.log("variables: " + variables);
             console.log("variables.length = " + variables.length);
-            getSingleVariableInternal(0, variables, null, function(variablesdata){
+            var variablesToDelete = [];
+            var deleteIndex = 0;
+            getSingleVariableInternal(0, variables, deviceid, variablesToDelete, deleteIndex, null, function(variablesdata, variablesToDelete){
+              console.log("variablesToDelete -> " + variablesToDelete);
               sendData.Items = variablesdata;
               sendData.Count = variablesdata.length;
-              shareUtil.SendSuccessWithData(res, sendData);
+              if (variablesToDelete.length == 0)    // no garbage Variables to delete in Device's list of Variables
+              {
+                shareUtil.SendSuccessWithData(res, sendData);
+              } else
+              {
+                deleteGarbageVariables(sendData, deviceid, variablesToDelete, function(sendData) {
+                shareUtil.SendSuccessWithData(res, sendData);
+                });
+              }
             });
           }
         }
@@ -469,7 +480,41 @@ function getVariable(req, res) {
 }
 
 
-function getSingleVariableInternal(index, variables, variableout, callback) {
+function deleteGarbageVariables(sendData, deviceid, variablesToDelete, callback) {
+
+  var updateExpr = "remove ";
+  for (var k in variablesToDelete)
+  {
+    updateExpr = updateExpr + "Variables[" + variablesToDelete[k] + "], ";
+  }
+
+  console.log("updateExpr = " + updateExpr);
+  var updateDevice = {
+    TableName : shareUtil.tables.device,
+    Key : {DeviceID : deviceid},
+    UpdateExpression : updateExpr.slice(0, -2)        // slice to delete ", " at the end of updateExpr
+  };
+  shareUtil.awsclient.update(updateDevice, onUpdate);
+  function onUpdate(err, data)
+  {
+    if (err)
+    {
+      var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      console.error(msg);
+      var errmsg = { message: msg };
+    } else
+    {
+      console.log("variables deleted from Device list of Variables!");
+      callback(sendData);
+    }
+  }
+}
+
+
+
+
+
+function getSingleVariableInternal(index, variables, deviceid, variablesToDelete, deleteIndex, variableout, callback) {
   if (index < variables.length)
   {
     if (index == 0)
@@ -491,15 +536,20 @@ function getSingleVariableInternal(index, variables, variableout, callback) {
         if (data.Count == 1)
         {
           variableout.push(data.Items[0]);
-          console.log("variableout: " + variableout);
+          //rsconsole.log("variableout: " + variableout);
+        } else
+        {
+          variablesToDelete[deleteIndex] = index;
+          console.log("variables[index] -> " + variables[index]);
+          deleteIndex+=1;
         }
       }
-      getSingleVariableInternal(index + 1, variables, variableout, callback);
+      getSingleVariableInternal(index + 1, variables, deviceid, variablesToDelete, deleteIndex, variableout, callback);
     }
   }
   else
   {
-    callback(variableout);
+    callback(variableout, variablesToDelete);
   }
 }
 
@@ -562,6 +612,8 @@ function IsDeviceSerialNumberExist(serialNumber, callback) {
        }
    }
 }
+
+
 
 function IsVariableExist(variableID, callback) {
 

@@ -450,10 +450,20 @@ function getParamByAssetID(req, res) {
           {
             console.log("parameters: " + parameters);
             console.log("parameters.length = " + parameters.length);
-            getSingleParamInternal(0, parameters, null, function(paramsdata){
+            var parametersToDelete = [];
+            var deleteIndex = 0;
+            getSingleParamInternal(0, parameters, assetid, parametersToDelete, deleteIndex,null, function(paramsdata, parametersToDelete){
               sendData.Items = paramsdata;
               sendData.Count = paramsdata.length;
+              if(parametersToDelete.length == 0)
+              {
               shareUtil.SendSuccessWithData(res, sendData);
+            } else
+            {
+              deleteGarbageParameters(sendData, assetid, parametersToDelete, function(sendData){
+              shareUtil.SendSuccessWithData(res, sendData);
+            });
+            }
             });
           }
         }
@@ -461,6 +471,42 @@ function getParamByAssetID(req, res) {
     }
   }
 }
+
+
+
+function deleteGarbageParameters(sendData, assetid, parametersToDelete, callback) {
+
+  var updateExpr = "remove ";
+  for (var k in parametersToDelete)
+  {
+    updateExpr = updateExpr + "#params[" + parametersToDelete[k] + "], ";
+  }
+
+  console.log("updateExpr = " + updateExpr);
+  var updateAsset = {
+    TableName : shareUtil.tables.assets,
+    Key : {AssetID : assetid},
+    UpdateExpression : updateExpr.slice(0, -2),        // slice to delete ", " at the end of updateExpr
+    ExpressionAttributeNames : {'#params' : 'Parameters'}
+  };
+  shareUtil.awsclient.update(updateAsset, onUpdate);
+  function onUpdate(err, data)
+  {
+    if (err)
+    {
+      var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      console.error(msg);
+      var errmsg = { message: msg };
+    } else
+    {
+      console.log("devices deleted from Asset list of Devices!");
+      callback(sendData);
+    }
+  }
+}
+
+
+
 
 
 function getParamAttributes(req, res) {
@@ -495,7 +541,7 @@ function getParamAttributes(req, res) {
 
 
 
-function getSingleParamInternal(index, params, paramout, callback) {
+function getSingleParamInternal(index, params, assetid, parametersToDelete, deleteIndex, paramout, callback) {
   if (index < params.length)
   {
     if (index == 0)
@@ -519,13 +565,19 @@ function getSingleParamInternal(index, params, paramout, callback) {
           paramout.push(data.Items[0]);
           console.log("paramout: " + paramout);
         }
+        else
+        {
+          parametersToDelete[deleteIndex] = index;
+          console.log("parameters[index] -> " + params[index]);
+          deleteIndex+= 1;
+        }
       }
-      getSingleParamInternal(index + 1, params, paramout, callback);
+      getSingleParamInternal(index + 1, params, assetid, parametersToDelete, deleteIndex, paramout, callback);
     }
   }
   else
   {
-    callback(paramout);
+    callback(paramout, parametersToDelete);
   }
 }
 

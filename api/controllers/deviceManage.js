@@ -87,13 +87,12 @@ function checkDeviceInAsset(deviceID, assetID, callback) {
           callback(true,null);
         }
       }
-
     }
     else {
-        var msg = "Error: Cannot find data"
+        //var msg = "Cannot find data";
+        var msg = "AssetID not found";
         callback(false,msg);
     }
-
   }
 });
 
@@ -192,19 +191,43 @@ function addDeviceInternal(deviceobj, res) {
 function addDevice(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var deviceobj = req.body;
-  if (deviceobj.SerialNumber) {
-    IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret,data){
-      if (ret) {
-        var msg = "Serial Number Already Exists";
+  if(deviceobj.DeviceID)
+  {
+    IsDeviceExist(deviceobj.DeviceID, function(ret1, data1)
+    {
+      if (ret1)
+      {
+        var msg = "DeviceID already exists";
         shareUtil.SendInvalidInput(res, msg);
-      } else {
-        addDeviceInternal(deviceobj, res);
+      } else
+      {
+        if (deviceobj.SerialNumber)
+        {
+          IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret,data)
+          {
+            if (ret)
+            {
+              var msg = "Serial Number Already Exists";
+              shareUtil.SendInvalidInput(res, msg);
+            } else
+            {
+              addDeviceInternal(deviceobj, res);
+            }
+          });
+        } else
+        {
+          addDeviceInternal(deviceobj, res);
+        }
       }
     });
   } else {
     addDeviceInternal(deviceobj, res);
   }
 }
+
+
+
+
 
 
 function updateDevice(req, res) {
@@ -426,7 +449,7 @@ function deleteDevice(req, res) {
 }
 
 
-
+//get list of devices by AssetID
 function getDevice(req, res) {
   var assetid = req.swagger.params.AssetID.value;
   var devicesParams = {
@@ -484,9 +507,14 @@ function getDevice(req, res) {
               console.log("devicesToDelete -> " + devicesToDelete);
               sendData.Items = devicesdata;
               sendData.Count = devicesdata.length;
-              deleteGarbageDevices(sendData, assetid, devicesToDelete, function(sendData){
+              if (devicesToDelete.length == 0){     // no garbage Devices to delete in Asset's list of Devices
+                  shareUtil.SendSuccessWithData(res, sendData);
+              } else
+              {
+                deleteGarbageDevices(sendData, assetid, devicesToDelete, function(sendData){
                 shareUtil.SendSuccessWithData(res, sendData);
-              });
+                });
+              }
             });
           }
         }
@@ -631,6 +659,8 @@ function IsDeviceSerialNumberExist(serialNumber, callback) {
        }
    }
 }
+
+
 
 function IsDeviceExist(deviceID, callback) {
 
