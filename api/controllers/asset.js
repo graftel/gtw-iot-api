@@ -165,6 +165,7 @@ function addAsset(req, res) {
   else {
     if(!assetobj.DisplayName && !assetobj.UserID)
     {
+      console.log("Error: no display name or userID given");
       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
     }
     else {

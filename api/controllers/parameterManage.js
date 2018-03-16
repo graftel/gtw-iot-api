@@ -151,10 +151,10 @@ function addParamInternal(paramobj, res) {
 function addParam(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var paramobj = req.body;
-  if (paramobj.SerialNumber) {
-    IsParamSerialNumberExist(paramobj.SerialNumber, function(ret,data){
+  if (paramobj.ParamID) {
+    IsParamExist(paramobj.ParamID, function(ret,data){
       if (ret) {
-        var msg = "Serial Number Already Exists";
+        var msg = "ParamID Already Exists";
         shareUtil.SendInvalidInput(res, msg);
       } else {
         addParamInternal(paramobj, res);
@@ -581,35 +581,6 @@ function getSingleParamInternal(index, params, assetid, parametersToDelete, dele
   }
 }
 
-
-
-function IsParamSerialNumberExist(serialNumber, callback) {
-
-  var Params = {
-     TableName : shareUtil.tables.param,
-     FilterExpression : "SerialNumber = :v1",
-     ExpressionAttributeValues : {':v1' : serialNumber.toString()}
-  };
-  shareUtil.awsclient.scan(Params, onQuery);
-  function onQuery(err, data) {
-       if (err) {
-           var msg = "Error:" + JSON.stringify(err, null, 2);
-           shareUtil.SendInternalErr(res, msg);
-           var errmsg = { message: msg };
-           //res.status(400).send(errmsg);
-           console.log("error msg :" + msg);
-       } else {
-         if (data.Count == 0)
-         {
-           callback(false, data);
-         }
-         else {
-           callback(true, data);
-         }
-
-       }
-   }
-}
 
 function IsParamExist(paramID, callback) {
 
