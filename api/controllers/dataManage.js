@@ -48,7 +48,7 @@ function addDataByDeviceID(req, res) {
   var dataobj = req.body;
   var dataArrayLength = req.body.Data.length;
 
-  console.log("timestamp = " + dataobj.TimeStamp);
+  console.log("timestamp = " + dataobj.Timestamp);
   console.log( "dataArrayLength = " + dataArrayLength);
 
 
@@ -59,7 +59,7 @@ function addDataByDeviceID(req, res) {
 
   if (dataArrayLength > 0) {    // check if dataArray is empty or not
 
-    var typeofTmstp = typeof(dataobj.TimeStamp);
+    var typeofTmstp = typeof(dataobj.Timestamp);
     console.log("type = " + typeofTmstp);
 
     console.log("function entered");
@@ -174,7 +174,7 @@ function createNewVariable(deviceid, dataobj, index, callback) {
   var crypto = require('crypto');
   var variableid = uuidv1();
   var variableName = dataobj.Data[index].VariableName;
-  var timestamp = dataobj.TimeStamp;
+  var timestamp = dataobj.Timestamp;
   var variableValue = dataobj.Data[index].Value;
 
   var params = {
