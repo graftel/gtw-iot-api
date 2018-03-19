@@ -1010,6 +1010,37 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /data/pushData:
+    x-swagger-router-controller: dataManage
+    put:
+      tags:
+      - data
+      summary: blalla
+      description: push data to rawData table using VarID and timestamp
+      # used as the method name of the controller
+      operationId: pushData
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          properties:
+            Data:
+              type: array
+              items:
+                $ref: '#/definitions/AddDataModel'
+            Timestamp:
+              type: integer
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /data/addDataByDeviceID:
     x-swagger-router-controller: dataManage
     post:
@@ -1259,7 +1290,7 @@ definitions:
   AddDataModel:
     type: object
     properties:
-      VariableName:
+      VariableID:
         type: string
       Value:
         type: string

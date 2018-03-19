@@ -38,8 +38,57 @@ module.exports = {
   getMultipleData: getMultipleData,
   getMultipleCalculatedData: getMultipleCalculatedData,
   getMultipleCalculatedDataWithParameter: getMultipleCalculatedDataWithParameter,
-  addDataByDeviceID: addDataByDeviceID
+  addDataByDeviceID: addDataByDeviceID,
+  pushData: pushData
 };
+
+
+function pushData(req, res) {
+
+  var dataobj = req.body;
+  var dataArray = dataobj.Data;
+  var timestamp = dataobj.Timestamp;
+  var itemsToAddArray = [];
+
+
+  for (index in dataArray) {
+    var itemToAdd =
+    {
+      PutRequest : {
+        Item : {
+          "VariableID" : dataArray[index].VariableID,
+          "Value" :  dataArray[index].Value,
+          "EpochTimeStamp" : timestamp
+        }
+      }
+    }
+
+    itemsToAddArray[index] = itemToAdd;
+  }
+
+  var dataParams = {
+    RequestItems : {
+      "Hx.RawData" : itemsToAddArray
+    }
+  }
+
+
+  console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
+
+  shareUtil.awsclient.batchWrite(dataParams, onPut);
+  function onPut(err, data) {
+    if (err) {
+      var msg = "Error:" +  JSON.stringify(err, null, 2);
+      console.error(msg);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      console.log("write items succeeded !");
+      shareUtil.SendSuccess(res);
+    }
+  }
+}
+
+
 
 
 function addDataByDeviceID(req, res) {
