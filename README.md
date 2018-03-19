@@ -1,1 +1,1 @@
-# Skeleton project for Swagger 11
+# Skeleton project for Swagger 

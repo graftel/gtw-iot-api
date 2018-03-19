@@ -72,9 +72,6 @@ function pushData(req, res) {
     }
   }
 
-
-  console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
-
   shareUtil.awsclient.batchWrite(dataParams, onPut);
   function onPut(err, data) {
     if (err) {

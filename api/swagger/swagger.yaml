@@ -692,7 +692,7 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /variable/getVariable:
+  /variable/getVariableByDeviceID:
     x-swagger-router-controller: variableManage
     get:
       tags:
@@ -700,7 +700,7 @@ paths:
       summary: get all variable
       description: get all variable by DeviceID
       # used as the method name of the controller
-      operationId: getVariable
+      operationId: getVariablebyDeviceID
       parameters:
       - name: DeviceID
         in: query
@@ -724,16 +724,44 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /variable/getVariableParameters:
+  /variable/getVariableByAssetID:
+    x-swagger-router-controller: variableManage
+    get:
+      tags:
+      - variable
+      description: get all variables in an Asset
+      operationId: getVariableByAssetID
+      parameters:
+      - name: AssetID
+        in: query
+        type: string
+        required: true
+      responses:
+        200:
+          description: Success
+          schema:
+            type: object
+            properties:
+              Items:
+                type: array
+                items:
+                  $ref: "#/definitions/VariableModel"
+              Count:
+                type: integer
+        default:
+          description: Error
+          schema: 
+            $ref: "#/definitions/ErrorResponse"
+  /variable/getVariableAttributes:
     # binds a127 app logic to a route
     x-swagger-router-controller: variableManage
     get:
       tags:
       - variable
-      summary: Retrieve list of parameters
-      description: Return list of variable's parameters for a given VariableID
+      summary: Retrieve list of attributes
+      description: Return list of variable's attributes for a given VariableID
       # used as the method name of the controller
-      operationId: getVariableParameters
+      operationId: getVariableAttributes
       parameters:
         - name: VariableID
           in: query
@@ -758,7 +786,7 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /variable/addVariable:
+  /variable/addVariableToDevice:
     x-swagger-router-controller: variableManage
     post:
       tags:
@@ -766,11 +794,43 @@ paths:
       summary: create a new variable
       description: create a new variable
       # used as the method name of the controller
-      operationId: addVariable
+      operationId: addVariableToDevice
       parameters:
+      - name: DeviceID
+        in: query
+        type: string
       - in: body
         name: body
-        description: Vairable object thats needs to be added
+        description: Variable object thats needs to be added
+        required: true
+        schema:
+          $ref: '#/definitions/VariableModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /variable/addVariableToAsset:
+    x-swagger-router-controller: variableManage
+    post:
+      tags:
+      - variable
+      summary: create a new variable
+      description: create a new variable
+      # used as the method name of the controller
+      operationId: addVariableToAsset
+      parameters:
+      - name: AssetID
+        in: query
+        type: string
+      - in: body
+        name: body
+        description: Variable object thats needs to be added
         required: true
         schema:
           $ref: '#/definitions/VariableModel'
@@ -827,8 +887,12 @@ paths:
         type: string
       - name: DeviceID
         in: query
-        description: variable's DeviceID
-        required: true
+        description: Variable's DeviceID
+        required: false
+        type: string
+      - name: AssetID
+        in: query
+        description: Variable's AssetID
         type: string
       responses:
         200:
@@ -1310,8 +1374,6 @@ definitions:
   VariableModel:
     type: object
     properties:
-      DeviceID:
-        type: string
       VariableID:
         type: string
       CurrentValue: 
@@ -1323,6 +1385,8 @@ definitions:
       VariableType:
         type: string
       VariableUnit:
+        type: string
+      Equation:
         type: string
   UserSettings:
     type: object

@@ -46,9 +46,9 @@ function updateParamIDInAsset(paramID, assetID, callback) {
             if (err) {
                 var msg = "Error:" +  JSON.stringify(err, null, 2);
                 console.error(msg);
-                callback(false,msg);
+                callback(false, msg);
             } else {
-                callback(true,null);
+                callback(true, null);
             }
         });
       }
