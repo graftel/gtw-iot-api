@@ -196,14 +196,14 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /asset/deleteParamFromAsset:
+  /asset/deleteVariableFromAsset:
     x-swagger-router-controller: asset
     put:
       tags:
       - asset
       description: Delete a Parameter from Asset's list of Parameters by AssetID and ParamID
       # used as the method name of the controller
-      operationId: deleteParamFromAsset
+      operationId: deleteVariableFromAsset
       parameters:
       - in: body
         name: body
@@ -1300,7 +1300,7 @@ definitions:
         type: string
       DeviceID:
        type: string
-      ParamID:
+      VariableID:
        type: string
   LogInModel:
     type: object

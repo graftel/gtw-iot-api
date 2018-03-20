@@ -32,7 +32,7 @@ module.exports = {
   deleteAsset: deleteAsset,
   IsAssetExist: IsAssetExist,
   deleteDeviceFromAsset: deleteDeviceFromAsset,
-  deleteParamFromAsset: deleteParamFromAsset
+  deleteVariableFromAsset: deleteVariableFromAsset
 };
 
 /*
@@ -220,15 +220,18 @@ function updateAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
   var isValid = true;
-  if(assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
+  if(assetobj.constructor === Object && Object.keys(assetobj).length === 0)
+  {
     isValid  = false;
   }
-  else {
+  else
+  {
     if(!assetobj.AssetID)
     {
       isValid  = false;
     }
-    else {
+    else
+    {
       // check if asset exists
       var assetsParams = {
          TableName : shareUtil.tables.assets,
@@ -238,89 +241,82 @@ function updateAsset(req, res) {
       };
       shareUtil.awsclient.scan(assetsParams, onScan);
       function onScan(err, data) {
-           if (err) {
-               var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-               console.error(msg);
-               var errmsg = {
-                 message: msg
-               };
-               res.status(500).send(errmsg);
-           } else {
-             if (data.Count == 0)
-             {
-               var errmsg = {
-                 message: "Items not found"
-               };
-               res.status(404).send(errmsg);
-             }
-             else {
-               var addTimeStamp = data.Items[0].AddTimeStamp;
-               var updateItems = "set ";
-               var expressvalues = {};
+        if (err)
+        {
+          var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
+          console.error(msg);
+          var errmsg = {
+            message: msg
+          };
+          res.status(500).send(errmsg);
+        } else
+        {
+          if (data.Count == 0)
+          {
+            var errmsg = {
+              message: "Items not found"
+            };
+            res.status(404).send(errmsg);
+          }
+          else
+          {
+            var addTimeStamp = data.Items[0].AddTimeStamp;
+            var updateItems = "set ";
+            var expressvalues = {};
+            if (assetobj.CompanyID)
+            {
+              updateItems = updateItems + "CompanyID = :v1,";
+              expressvalues[":v1"] = assetobj.CompanyID.toString();
+            }
+            if (assetobj.DisplayName)
+            {
+              updateItems = updateItems + "DisplayName = :v2,";
+              expressvalues[":v2"] = assetobj.DisplayName.toString();
+            }
+            if (assetobj.LatestTimeStamp)
+            {
+              updateItems = updateItems + "LatestTimeStamp = :v3,";
+              expressvalues[":v3"] = assetobj.LatestTimeStamp;
+            }
+            if (assetobj.VerificationCode)
+            {
+              updateItems = updateItems + "VerificationCode = :v4,";
+              expressvalues[":v4"] = assetobj.VerificationCode.toString();
+            }
 
-               if (assetobj.CompanyID)
-               {
-                 updateItems = updateItems + "CompanyID = :v1,";
-                 expressvalues[":v1"] = assetobj.CompanyID.toString();
-               }
-               if (assetobj.DisplayName)
-               {
-                 updateItems = updateItems + "DisplayName = :v2,";
-                 expressvalues[":v2"] = assetobj.DisplayName.toString();
-
-               }
-
-               if (assetobj.LatestTimeStamp)
-               {
-                 updateItems = updateItems + "LatestTimeStamp = :v3,";
-                 expressvalues[":v3"] = assetobj.LatestTimeStamp;
-               }
-
-               if (assetobj.VerificationCode)
-               {
-                 updateItems = updateItems + "VerificationCode = :v4,";
-                 expressvalues[":v4"] = assetobj.VerificationCode.toString();
-               }
-
-               updateItems = updateItems.slice(0, -1);
-
-               var updateParams = {
-                     TableName : shareUtil.tables.assets,
-                     Key : {
-                       AssetID : assetobj.AssetID,
-                       AddTimeStamp : addTimeStamp
-                   },
-                   UpdateExpression : updateItems,
-                   ExpressionAttributeValues : expressvalues
-                 };
-               console.log(updateParams);
-               shareUtil.awsclient.update(updateParams, function (err, data) {
-        				    if (err) {
-        				        var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-                        console.error(msg);
-                        var errmsg = {
-                          message: msg
-                        };
-                        res.status(500).send(errmsg);
-        				    } else {
-                      var msg = {
-                        message: "Success"
-                      };
-                      console.log("asset updated!");
-                      res.status(200).send(msg);
-        				    }
-        				});
-
-             }
-
-           }
-       }
-
-
-
+            updateItems = updateItems.slice(0, -1);
+            var updateParams = {
+                  TableName : shareUtil.tables.assets,
+                  Key : {
+                    AssetID : assetobj.AssetID,
+                    AddTimeStamp : addTimeStamp
+                    },
+                  UpdateExpression : updateItems,
+                  ExpressionAttributeValues : expressvalues
+              };
+            console.log(updateParams);
+            shareUtil.awsclient.update(updateParams, function (err, data) {
+      				if (err)
+              {
+    				    var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+                console.error(msg);
+                var errmsg = {
+                  message: msg
+                };
+                res.status(500).send(errmsg);
+      				} else
+              {
+              var msg = {
+                message: "Success"
+                };
+              console.log("asset updated!");
+              res.status(200).send(msg);
+      				}
+      			});
+          }
+        }
+      }
     }
-
-
     if (!isValid)
     {
       var errmsg = {
@@ -330,8 +326,6 @@ function updateAsset(req, res) {
       res.status(400).send(errmsg);
     }
   }
-  // this sends back a JSON response which is a single string
-
 }
 
 
@@ -413,19 +407,18 @@ function deleteDeviceFromAsset(req, res) {
 }
 
 
-function deleteParamFromAsset(req, res) {
+function deleteVariableFromAsset(req, res) {
 
   var assetobj = req.body;
   var assetid = assetobj.AssetID;
-  var paramid = assetobj.ParamID;
+  var variableid = assetobj.VariableID;
 
-  // 1st -> get index of device to delete
+  // 1st -> get index of variable to delete
   var assetsParams = {
     TableName : shareUtil.tables.assets,
     KeyConditionExpression : "AssetID = :V1",
     ExpressionAttributeValues :  { ':V1' : assetid},
-    ProjectionExpression : "#param",
-    ExpressionAttributeNames : { '#param' : 'Parameters'}
+    ProjectionExpression : "Variables"
   };
   shareUtil.awsclient.query(assetsParams, onQuery);
   function onQuery(err, data)
@@ -439,30 +432,30 @@ function deleteParamFromAsset(req, res) {
       console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0)
       {
-        var errmsg = {message: "AssetID does not exist or Asset does not contain any Parameter"};
+        var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
         res.status(400).send(errmsg);
       }
       else
       {
-        // find index of device in devices list coming from the result of the query in the Asset table
-        var param = data.Items[0].Parameters;
-        var paramIndex;
+        // find index of variable in variables list coming from the result of the query in the Asset table
+        var variables = data.Items[0].Variables;
+        var varIndex;
         var index = 0;
-        if ( typeof param == "undefined"){
+        if ( typeof variables == "undefined"){
         //  var errmsg = {message: "Asset does not contain any Param"};
           //res.status(400).send(errmsg);
-          var msg = "Asset does not contain any Param";
+          var msg = "Asset does not contain any Variable";
           shareUtil.SendNotFound(res, msg);
         }
         else
         {
-          while (index < param.length)
+          while (index < variables.length)
           {
-            console.log("param.Items[0]: " + param[index]);
-            if (param[index] == paramid)
+            console.log("variables.Items[0]: " + variables[index]);
+            if (variables[index] == variableid)
             {
-              paramIndex = index;
-              index  = param.length;
+              varIndex = index;
+              index  = variables.length;
             } else
             {
               index +=1;
@@ -472,14 +465,12 @@ function deleteParamFromAsset(req, res) {
       }
       if (index > 0)
       {  // to make sure the update is made after the deviceIndex is found
-        console.log("param.index = " + paramIndex);
-        var updateExpr = "remove #param[" + paramIndex + "]";
+        console.log("var.index = " + varIndex);
+        var updateExpr = "remove Variables[" + varIndex + "]";
         var updateAsset = {
           TableName : shareUtil.tables.assets,
           Key : {AssetID : assetid},
-          UpdateExpression : updateExpr,
-          ExpressionAttributeNames : { '#param' : 'Parameters'}
-          //ExpressionAttributeValues : { ':V1' : deviceIndex}
+          UpdateExpression : updateExpr
         };
         shareUtil.awsclient.update(updateAsset, onUpdate);
         function onUpdate(err, data)
@@ -493,7 +484,7 @@ function deleteParamFromAsset(req, res) {
           } else
           {
             var msg = { message: "Success" };
-            console.log("Parameter deleted from Asset!");
+            console.log("Variable deleted from Asset!");
             res.status(200).send(msg);
           }
         }
