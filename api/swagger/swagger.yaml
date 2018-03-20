@@ -48,7 +48,7 @@ security:
   - UserSecurity: []
   
 paths:
-  /asset/getAsset:
+  /asset/getAssetByUserID:
     # binds a127 app logic to a route
     x-swagger-router-controller: asset
     get:
@@ -57,7 +57,7 @@ paths:
       summary: Retrieve list of assets
       description: Return list of assets by user id
       # used as the method name of the controller
-      operationId: getAsset
+      operationId: getAssetByUserID
       parameters:
         - name: userID
           in: query
@@ -89,16 +89,15 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /asset/getSingleAsset:
+  /asset/getAssetAttributes:
     # binds a127 app logic to a route
     x-swagger-router-controller: asset
     get:
       tags:
       - asset
-      summary: Retrieve list of parameters
-      description: Return list of asset's parameters for a given AssetID
+      description: Return list of asset's attributes for a given AssetID
       # used as the method name of the controller
-      operationId: getSingleAsset
+      operationId: getAssetAttributes
       parameters:
         - name: AssetID
           in: query
@@ -519,7 +518,7 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /device/getDevice:
+  /device/getDeviceByAssetID:
     x-swagger-router-controller: deviceManage
     get:
       tags:
@@ -527,7 +526,7 @@ paths:
       summary: get all device
       description: get all device by AssetID
       # used as the method name of the controller
-      operationId: getDevice
+      operationId: getDeviceByAssetID
       parameters:
       - name: AssetID
         in: query
@@ -551,16 +550,15 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /device/getDeviceParameters:
+  /device/getDeviceAttributes:
     # binds a127 app logic to a route
     x-swagger-router-controller: deviceManage
     get:
       tags:
       - device
-      summary: Retrieve list of parameters
-      description: Return list of device's parameters for a given DeviceID
+      description: Return list of device's attributes for a given DeviceID
       # used as the method name of the controller
-      operationId: getDeviceParameters
+      operationId: getDeviceAttributes
       parameters:
         - name: DeviceID
           in: query

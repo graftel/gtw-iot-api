@@ -16,8 +16,8 @@ module.exports = {
   addExistingDeviceBySerialNumber: addExistingDeviceBySerialNumber,
   updateDevice: updateDevice,
   deleteDevice: deleteDevice,
-  getDevice: getDevice,
-  getDeviceParameters: getDeviceParameters
+  getDeviceByAssetID: getDeviceByAssetID,
+  getDeviceAttributes: getDeviceAttributes
 };
 
 function updateDeviceIDInAsset(deviceID, assetID, callback) {
@@ -450,7 +450,7 @@ function deleteDevice(req, res) {
 
 
 //get list of devices by AssetID
-function getDevice(req, res) {
+function getDeviceByAssetID(req, res) {
   var assetid = req.swagger.params.AssetID.value;
   var devicesParams = {
     TableName : shareUtil.tables.assets,
@@ -599,7 +599,7 @@ function getSingleDeviceInternal(index, devices, assetid, devicesToDelete, delet
 }
 
 
-function getDeviceParameters(req, res) {
+function getDeviceAttributes(req, res) {
 
   var deviceid = req.swagger.params.DeviceID.value;
 
