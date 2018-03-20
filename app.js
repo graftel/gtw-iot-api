@@ -7,7 +7,7 @@ module.exports = app; // for testing
 
 var config = {
   appRoot: __dirname, // required config
-  swaggerSecurityHandlers: {
+  /*swaggerSecurityHandlers: {
     UserSecurity: function(req, authOrSecDef, scopesOrApiKey, callback) {
         var apikey = req.headers['x-api-key'];
         if (typeof(apikey) != "undefined")
@@ -26,10 +26,8 @@ var config = {
         else {
           return callback(new Error('access denied'));
         }
-
-
     }
-}
+  }*/
 };
 
 SwaggerExpress.create(config, function(err, swaggerExpress) {

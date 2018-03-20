@@ -25,14 +25,15 @@ var userManage = require('./userManage.js');
   we specify that in the exports of this module that 'hello' maps to the function named 'hello'
  */
 module.exports = {
-  getAssetByUserID: getAssetByUserID,
+  getAssetByUser: getAssetByUser,
   getAssetAttributes: getAssetAttributes,
-  addAsset: addAsset,
+  createAsset: createAsset,
   updateAsset: updateAsset,
   deleteAsset: deleteAsset,
   IsAssetExist: IsAssetExist,
   deleteDeviceFromAsset: deleteDeviceFromAsset,
-  deleteVariableFromAsset: deleteVariableFromAsset
+  deleteVariableFromAsset: deleteVariableFromAsset,
+  getDevicesFromAsset: getDevicesFromAsset
 };
 
 /*
@@ -42,7 +43,7 @@ module.exports = {
   Param 2: a handle to the response object
  */
 
-function getAssetByUserID(req, res) {
+function getAssetByUser(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var userid = req.swagger.params.userID.value;
   // first get assets in UserID
@@ -155,7 +156,7 @@ function getAssetAttributes(req, res) {
 
 }
 
-function addAsset(req, res) {
+function createAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
   console.log(assetobj);
@@ -405,6 +406,46 @@ function deleteDeviceFromAsset(req, res) {
     }
   }
 }
+
+
+
+
+function getDevicesFromAsset(assetid, callback){
+
+  var assetsParams = {
+    //TableName : shareUtil.tables.assets,
+    TableName : "Hx.Asset",
+    KeyConditionExpression : "AssetID = :V1",
+    ExpressionAttributeValues :  { ':V1' : assetid},
+    ProjectionExpression : "Devices"
+  };
+  shareUtil.awsclient.query(assetsParams, onQuery);
+  function onQuery(err, data)
+  {
+    if (err)
+    {
+    var msg = "Error:" + JSON.stringify(err, null, 2);
+    //shareUtil.SendInternalErr(res, msg);
+    callback(false, msg);
+    } else
+    {
+      //console.log(JSON.stringify(assetsParams, null ,2));
+      if (data.Count == 0)
+      {
+        var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
+        //res.status(400).send(errmsg);
+        callback(false, msg);
+      }
+      else
+      {
+        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        callback(true, data.Items[0]);
+      }
+    }
+  }
+}
+
+
 
 
 function deleteVariableFromAsset(req, res) {

@@ -668,7 +668,7 @@ function deleteVariable(req, res) {
     if (ret1)
     {
       if (typeof deviceID == "undefined" && typeof assetID == "undefined")
-      {   // in case we want to delete a Variable that is not in any Device
+      {   // in case we want to delete a Variable that is not in any Device no any Asset
         deleteSingleVariable(variableID, function(ret, data)
         {
           if (ret)

@@ -36,17 +36,17 @@ tags:
     description: Find out more about our store
     url: http://swagger.io
 
-securityDefinitions:
-  UserSecurity:
-    type: apiKey
-    in: header
-    name: x-api-key
+#securityDefinitions:
+ # UserSecurity:
+ #   type: apiKey
+  #  in: header
+  #  name: x-api-key
     
-security:
-  - UserSecurity: []
+#security:
+ # - UserSecurity: []
   
 paths:
-  /asset/getAssetByUserID:
+  /asset/getAssetByUser:
     # binds a127 app logic to a route
     x-swagger-router-controller: asset
     get:
@@ -55,7 +55,7 @@ paths:
       summary: Retrieve list of assets
       description: Return list of assets by user id
       # used as the method name of the controller
-      operationId: getAssetByUserID
+      operationId: getAssetByUser
       parameters:
         - name: userID
           in: query
@@ -120,15 +120,14 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /asset/addAsset:
+  /asset/createAsset:
     x-swagger-router-controller: asset
     post:
       tags:
       - asset
-      summary: Add a new Asset
-      description: Add a new asset
+      description: Create a new asset and add it to User list
       # used as the method name of the controller
-      operationId: addAsset
+      operationId: createAsset
       parameters:
       - in: body
         name: AssetObject
@@ -516,19 +515,49 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /device/getDeviceByAssetID:
+  /device/getDeviceByAsset:
     x-swagger-router-controller: deviceManage
     get:
       tags:
       - device
-      summary: get all device
       description: get all device by AssetID
       # used as the method name of the controller
-      operationId: getDeviceByAssetID
+      operationId: getDeviceByAsset
       parameters:
       - name: AssetID
         in: query
         description: AssetID in which the device is
+        required: true
+        type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            type: object
+            properties:
+              Items:
+                type: array
+                items:
+                  $ref: "#/definitions/DeviceModel"
+              Count:
+                type: integer
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /device/getDeviceByUser:
+    x-swagger-router-controller: deviceManage
+    get:
+      tags:
+      - device
+      description: get all device by UserID
+      # used as the method name of the controller
+      operationId: getDeviceByUser
+      parameters:
+      - name: UserID
+        in: query
+        description: UserID in which the device is
         required: true
         type: string
       responses:
@@ -581,19 +610,43 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /device/addDevice:
+  /device/createDevice:
     x-swagger-router-controller: deviceManage
     post:
       tags:
       - device
-      summary: create a new device
       description: create a new device
       # used as the method name of the controller
-      operationId: addDevice
+      operationId: createDevice
       parameters:
       - in: body
         name: body
-        description: Device object thats need to be added
+        description: Device object thats need to be created
+        required: true
+        schema:
+          $ref: '#/definitions/DeviceModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /device/createDeviceToAsset:
+    x-swagger-router-controller: deviceManage
+    post:
+      tags:
+      - device
+      description: create a new device
+      # used as the method name of the controller
+      operationId: createDeviceToAsset
+      parameters:
+      - in: body
+        name: body
+        description: Device object thats need to be created
         required: true
         schema:
           $ref: '#/definitions/DeviceModel'
@@ -629,6 +682,29 @@ paths:
           schema:
             $ref: "#/definitions/SuccessResponse"
         # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /device/removeDeviceFromAsset:
+    x-swagger-router-controller: deviceManage
+    put:
+      tags:
+      - device
+      description: Remove a device from Asset's list of Devices by AssetID and DeviceID
+      # used as the method name of the controller
+      operationId: removeDeviceFromAsset
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateAssetModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
         default:
           description: Error
           schema:
@@ -1194,6 +1270,8 @@ definitions:
   DeviceModel:
     type: object
     properties:
+      UserID:
+        type: string
       AssetID:
         type: string
       DeviceID:
