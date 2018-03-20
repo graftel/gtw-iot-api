@@ -413,8 +413,8 @@ function deleteDeviceFromAsset(req, res) {
 function getDevicesFromAsset(assetid, callback){
 
   var assetsParams = {
-    //TableName : shareUtil.tables.assets,
-    TableName : "Hx.Asset",
+    TableName : shareUtil.tables.assets,
+    //TableName : "Hx.Asset",
     KeyConditionExpression : "AssetID = :V1",
     ExpressionAttributeValues :  { ':V1' : assetid},
     ProjectionExpression : "Devices"
