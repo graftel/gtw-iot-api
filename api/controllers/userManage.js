@@ -25,8 +25,43 @@ module.exports = {
   resetUser: resetUser,
   validateResetPasswordLink: validateResetPasswordLink,
   updatePassword: updatePassword,
-  updateUserAsset: updateUserAsset
+  updateUserAsset: updateUserAsset,
+  getDevicesFromUser: getDevicesFromUser
 };
+
+function getDevicesFromUser(userid, callback) {
+  var usersParams = {
+    TableName : shareUtil.tables.users,
+    //TableName : "Hx.Asset",
+    KeyConditionExpression : "UserID = :V1",
+    ExpressionAttributeValues :  { ':V1' : userid},
+    ProjectionExpression : "Devices"
+  };
+  shareUtil.awsclient.query(usersParams, onQuery);
+  function onQuery(err, data)
+  {
+    if (err)
+    {
+    var msg = "Error:" + JSON.stringify(err, null, 2);
+    //shareUtil.SendInternalErr(res, msg);
+    callback(false, msg);
+    } else
+    {
+      //console.log(JSON.stringify(assetsParams, null ,2));
+      if (data.Count == 0)
+      {
+        var errmsg = {message: "UserID does not exist or User does not contain any Variable"};
+        //res.status(400).send(errmsg);
+        callback(false, msg);
+      }
+      else
+      {
+        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        callback(true, data.Items[0]);
+      }
+    }
+  }
+}
 
 function createUser(req, res) {
   var userobj = req.body;

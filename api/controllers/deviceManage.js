@@ -2,6 +2,7 @@
 
 var shareUtil = require('./shareUtil.js');
 var asset = require('./asset.js');
+var userManage = require('./userManage.js')
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -230,6 +231,14 @@ function addDeviceInternal(deviceobj, res) {
     },
     ConditionExpression : "attribute_not_exists(DeviceID)"
   };
+
+  isDisplayNameUniqueInUser(deviceobj.DisplayName, deviceobj.UserID, function(ret, data) {
+    if (ret)
+    {
+      console.log("displayName unique");
+
+
+
   params.Item = Object.assign(params.Item, deviceobj);
   delete params.Item['UserID'];
   delete params.Item['AssetID'];
@@ -243,38 +252,50 @@ function addDeviceInternal(deviceobj, res) {
       shareUtil.SendInternalErr(res,msg);
     } else
     {
-    //  if (deviceobj.UserID)
-    //  {
-        updateDeviceIDInUser(deviceID, deviceobj.UserID, function(ret1, data){
-          if (ret1)
+      updateDeviceIDInUser(deviceID, deviceobj.UserID, function(ret1, data){
+        if (ret1)
+        {
+          if (deviceobj.AssetID)
           {
-            if (deviceobj.AssetID)
-            {
-              updateDeviceIDInAsset(deviceID, deviceobj.AssetID, function(ret2, data){
-                if (ret2){
-                  shareUtil.SendSuccess(res);
-                } else
-                {
-                  var msg = "Error:" + JSON.stringify(data);
-                  shareUtil.SendInternalErr(res,msg);
-                }
-              });
-            } else
-            {
-              shareUtil.SendSuccess(res);
-            }
+            updateDeviceIDInAsset(deviceID, deviceobj.AssetID, function(ret2, data){
+              if (ret2){
+                shareUtil.SendSuccess(res);
+              } else
+              {
+                var msg = "Error:" + JSON.stringify(data);
+                shareUtil.SendInternalErr(res,msg);
+              }
+            });
           } else
           {
-            var msg = "Error:" + JSON.stringify(data);
-            shareUtil.SendInternalErr(res,msg);
+            shareUtil.SendSuccess(res);
           }
-        });
-  //    } else
-    //  {
-  //      shareUtil.SendSuccess(res);
-  //    }
+        } else
+        {
+          var msg = "Error:" + JSON.stringify(data);
+          shareUtil.SendInternalErr(res,msg);
+        }
+      });
     }
   });
+} else
+{
+  console.log("displayName not unique")
+
+  var uniqNumb = 1;
+  var newDisplayName = deviceobj.DisplayName + uniqNumb;
+  isDisplayNameUniqueInUser(newDisplayName, deviceobj.UserID, function(ret, data) {
+    if (ret){
+
+    } else {
+
+    }
+  });
+
+  shareUtil.SendInvalidInput(res, data);
+}
+});
+
 }
 
 
@@ -477,15 +498,15 @@ function createDeviceToAsset(req, res) {
           {
             if (deviceobj.SerialNumber)
             {
-              IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret,data)
+              IsDeviceSerialNumberUniqueInUser(deviceobj.SerialNumber, function(ret,data)
               {
                 if (ret)
                 {
-                  var msg = "Serial Number Already Exists";
-                  shareUtil.SendInvalidInput(res, msg);
+                  addDeviceInternal(deviceobj, res);
                 } else
                 {
-                  addDeviceInternal(deviceobj, res);
+                  var msg = "Serial Number Already Exists";
+                  shareUtil.SendInvalidInput(res, msg);
                 }
               });
             } else
@@ -511,6 +532,9 @@ function createDeviceToAsset(req, res) {
 function createDevice(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var deviceobj = req.body;
+  var displayName = deviceobj.DisplayName;
+  var userid = deviceobj.UserID;
+
   IsUserExist(deviceobj.UserID, function(ret, data){
     if (ret){
       if(deviceobj.DeviceID)
@@ -525,15 +549,15 @@ function createDevice(req, res) {
           {
             if (deviceobj.SerialNumber)
             {
-              IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret,data)
+              IsDeviceSerialNumberUniqueInUser(deviceobj.SerialNumber, deviceobj.UserID, function(ret,data)
               {
                 if (ret)
                 {
-                  var msg = "Serial Number Already Exists";
-                  shareUtil.SendInvalidInput(res, msg);
+                  addDeviceInternal(deviceobj, res);
                 } else
                 {
-                  addDeviceInternal(deviceobj, res);
+                  var msg = "Serial Number Already Exists";
+                  shareUtil.SendInvalidInput(res, msg);
                 }
               });
             } else
@@ -554,6 +578,144 @@ function createDevice(req, res) {
 }
 
 
+function IsDeviceSerialNumberUniqueInUser(serialNumber, userid, callback) {
+
+  userManage.getDevicesFromUser(userid, function(ret, data){
+    if (ret)
+    {
+      var devices = data.Devices;
+      var serialNumberList = []
+      getSerialNumberList(devices, 0, serialNumberList, function(ret1, serialNumberList, data1) {
+        if (ret1)
+        {
+          console.log("serialNumberList" + JSON.stringify(serialNumberList, null, 2));
+          isItemInList(serialNumber, serialNumberList, function(ret2, data2) {
+            if (ret2)
+            {
+              callback(true, null);
+            } else
+            {
+              var msg = "SerialNumber not unique";
+              callback(false, msg)
+            }
+          });
+        } else
+        {
+          callback(false, null, data1);
+        }
+      })
+
+    } else
+    {
+      callback(false, data);
+    }
+  });
+}
+
+function getSerialNumberList(devicesArrayID, index, serialNumberList, callback) {   // Can improve speed of this function by doing onl one query with all teh DeviceID rather than doing a query for each DeviceID
+
+  if (index < devicesArrayID.length)
+  {
+    var deviceid = devicesArrayID[index];
+    var devicesParams = {
+      TableName : shareUtil.tables.device,
+      KeyConditionExpression : "DeviceID = :v1",
+      ExpressionAttributeValues : {':v1' : deviceid},
+      ProjectionExpression : "SerialNumber"
+    }
+    shareUtil.awsclient.query(devicesParams, onQuery);
+    function onQuery(err, data) {
+      if (err) {
+        var msg = "Error:" + JSON.stringify(err, null, 2);
+        callback(false, null, msg);
+      } else
+      {
+        serialNumberList.push(data.Items[0].SerialNumber);
+      }
+      getSerialNumberList(devicesArrayID, index+1, serialNumberList, callback);
+    }
+  } else
+  {
+    callback(true, serialNumberList, null);
+  }
+}
+
+
+
+function isDisplayNameUniqueInUser(displayName, userid, callback){
+
+  userManage.getDevicesFromUser(userid, function(ret, data){
+    if (ret)
+    {
+      var devices = data.Devices;
+      var displayNameList = []
+      getDisplayNameList(devices, 0, displayNameList, function(ret1, displayNameList, data1) {
+        if (ret1)
+        {
+          console.log("displayNameList" + JSON.stringify(displayNameList, null, 2));
+          isItemInList(displayName, displayNameList, function(ret2, data2) {
+            if (ret2)
+            {
+              callback(true, null);
+            } else
+            {
+              var msg = "displayName not unique";
+              callback(false, msg)
+            }
+          });
+        } else
+        {
+          callback(false, null, data1);
+        }
+      })
+
+    } else
+    {
+      callback(false, data);
+    }
+  });
+}
+
+function isItemInList(item, itemList, callback){
+
+  if (itemList.indexOf(item) > -1)
+  {
+    // item is in list
+    var msg = "item is the list";
+    callback(false, msg);
+  } else
+  {
+    callback(true, null);
+  }
+}
+
+function getDisplayNameList(devicesArrayID, index, displayNameList, callback) {   // Can improve speed of this function by doing onl one query with all teh DeviceID rather than doing a query for each DeviceID
+
+  if (index < devicesArrayID.length)
+  {
+    var deviceid = devicesArrayID[index];
+    var devicesParams = {
+      TableName : shareUtil.tables.device,
+      KeyConditionExpression : "DeviceID = :v1",
+      ExpressionAttributeValues : {':v1' : deviceid},
+      ProjectionExpression : "DisplayName"
+    }
+    shareUtil.awsclient.query(devicesParams, onQuery);
+    function onQuery(err, data) {
+      if (err) {
+        var msg = "Error:" + JSON.stringify(err, null, 2);
+        callback(false, null, msg);
+      } else
+      {
+        displayNameList.push(data.Items[0].DisplayName);
+      }
+      getDisplayNameList(devicesArrayID, index+1, displayNameList, callback);
+    }
+  } else
+  {
+    callback(true, displayNameList, null);
+  }
+}
 
 
 
