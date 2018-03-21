@@ -1,4 +1,4 @@
-'use strict';
+//'use strict';
 /*
  'use strict' is not required but helpful for turning syntactical errors into true errors in the program flow
  https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
@@ -10,8 +10,9 @@
 
   It is a good idea to list the modules that your application depends on in the package.json in the project root
  */
-var shareUtil = require('./shareUtil.js');
+
 var userManage = require('./userManage.js');
+var shareUtil = require('./shareUtil.js');
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -81,24 +82,60 @@ function getAssetByUser(req, res) {
                 shareUtil.SendSuccessWithData(res, sendData);
              }
              else{
-               getSingleAssetInternal(0, assets, null, function(assetsdata){
+               var assetsToDelete = [];
+               var deleteIndex = 0;
+               getSingleAssetInternal(0, assets, assetsToDelete, deleteIndex ,null, function(assetsdata, assetsToDelete){
                  sendData.Items = assetsdata;
                  sendData.Count = assetsdata.length;
-                 shareUtil.SendSuccessWithData(res, sendData);
+                 if (assetsToDelete.length == 0) {
+                   shareUtil.SendSuccessWithData(res, sendData);
+                 } else {
+                   deleteGarbageAssets(userid, assetsToDelete, function() {
+                    shareUtil.SendSuccessWithData(res, sendData);
+                   });
+                 }
                });
              }
            }
-
-
          }
-
        }
    }
-  // this sends back a JSON response which is a single string
-
 }
 
-function getSingleAssetInternal(index, assets, assetout, callback) {
+
+function deleteGarbageAssets(userid, assetsToDelete, callback) {
+
+  var updateExpr = "remove ";
+  for (var k in assetsToDelete)
+  {
+    updateExpr = updateExpr + "Assets[" + assetsToDelete[k] + "], ";
+  }
+
+  console.log("updateExpr = " + updateExpr);
+  var updateAsset = {
+    TableName : shareUtil.tables.users,
+    Key : {UserID : userid},
+    UpdateExpression : updateExpr.slice(0, -2)        // slice to delete ", " at the end of updateExpr
+  };
+  shareUtil.awsclient.update(updateAsset, onUpdate);
+  function onUpdate(err, data)
+  {
+    if (err)
+    {
+      var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      console.error(msg);
+      var errmsg = { message: msg };
+    } else
+    {
+      console.log("assets deleted from User list of Assets!");
+      callback();
+    }
+  }
+}
+
+
+
+function getSingleAssetInternal(index, assets, assetsToDelete, deleteIndex, assetout, callback) {
     if (index < assets.length){
       if (index == 0)
       {
@@ -107,7 +144,7 @@ function getSingleAssetInternal(index, assets, assetout, callback) {
       var assetsParams = {
          TableName : shareUtil.tables.assets,
          KeyConditionExpression : "AssetID = :v1",
-         ExpressionAttributeValues : {':v1' : assets[index].AssetID}
+         ExpressionAttributeValues : {':v1' : assets[index]}
       };
       shareUtil.awsclient.query(assetsParams, onScan);
       function onScan(err, data) {
@@ -115,14 +152,17 @@ function getSingleAssetInternal(index, assets, assetout, callback) {
              if (data.Count == 1)
              {
                 assetout.push(data.Items[0]);
+             } else
+             {
+               assetsToDelete[deleteIndex] = index;
+               deleteIndex+=1;
              }
-
            }
-           getSingleAssetInternal(index + 1, assets, assetout, callback);
+           getSingleAssetInternal(index + 1, assets, assetsToDelete, deleteIndex, assetout, callback);
        }
     }
     else {
-      callback(assetout);
+      callback(assetout, assetsToDelete);
     }
 }
 
@@ -172,7 +212,13 @@ function createAsset(req, res) {
     else {
       var uuidv1 = require('uuid/v1');
       var crypto = require('crypto');
-      var assetID = uuidv1();
+
+      if (assetobj.AssetID){
+        var assetID = assetobj.AssetID;
+      } else {
+        var assetID = uuidv1();
+      }
+
       var params = {
         TableName : shareUtil.tables.assets,
         Item : {
@@ -201,13 +247,9 @@ function createAsset(req, res) {
                   var msg = "Error:" + JSON.stringify(data);
                   shareUtil.SendInternalErr(res,msg);
                 }
-
             });
-
         }
       });
-
-
     }
   }
 
@@ -538,9 +580,47 @@ function deleteVariableFromAsset(req, res) {
 
 
 
+function deleteAsset(req, res){
 
+  var assetid = req.swagger.params.assetID.value;
+  var userid = req.swagger.params.UserID.value;
 
-function deleteAsset(req, res) {
+  var userParams = {
+    TableName: shareUtil.tables.users,
+    KeyConditionExpression : "UserID = :v1",
+    ExpressionAttributeValues : {':v1' : userid},
+    ProjectionExpression : "Assets"
+  }
+
+  shareUtil.awsclient.query(userParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res);
+    } else
+    {
+      if(data.Count == 0)
+      {
+        var msg = "AssetID does not exist or Asset does not contain any Variable";
+        shareUtil.SendNotFound(res, msg);
+      } else
+      {
+        var assets = data.Items[0].Assets;
+        var assetIndex = assets.indexOf(assetid);
+        if (assetIndex > -1)
+        {
+
+        } else
+        {
+          var msg = "asset not found in User";
+          shareUtil.SendNotFound(res, msg);
+        }
+      }
+    }
+  }
+}
+
+function deleteAssetOld(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetID = req.swagger.params.assetID.value;
 

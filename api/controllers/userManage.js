@@ -234,7 +234,7 @@ function updateUserAsset(userID, assetID, callback) {
             '#assets': 'Assets'
           },
         ExpressionAttributeValues: {
-          ':id': [{AssetID: assetID}],
+          ':id': [assetID],
           ':empty_list': []
         }
 

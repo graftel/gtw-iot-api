@@ -1,4 +1,4 @@
-'use strict';
+//'use strict';
 
 var shareUtil = require('./shareUtil.js');
 var asset = require('./asset.js');
@@ -27,7 +27,7 @@ module.exports = {
 };
 
 
-function getDevicesFromAsset(assetid, callback){
+/*function getDevicesFromAsset(assetid, callback){
 
   var assetsParams = {
     TableName : shareUtil.tables.assets,
@@ -59,7 +59,7 @@ function getDevicesFromAsset(assetid, callback){
       }
     }
   }
-}
+}*/
 
 
 function removeDeviceFromAsset(req, res){
@@ -68,7 +68,7 @@ function removeDeviceFromAsset(req, res){
   var assetid = deviceobj.AssetID;
   var deviceid = deviceobj.DeviceID
 
-  getDevicesFromAsset(assetid, function(ret, data) {
+    asset.getDevicesFromAsset(assetid, function(ret, data) {
     if (ret)
     {
       var deviceIndex = data.Devices.indexOf(deviceid);

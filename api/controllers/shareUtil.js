@@ -20,7 +20,7 @@ var tables = {
     param: "Hx.Parameters"
 };
 
-var asset = require('./asset.js');
+//var asset = require('./asset.js');
 
 
 module.exports = {

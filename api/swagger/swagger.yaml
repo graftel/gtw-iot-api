@@ -220,14 +220,16 @@ paths:
     delete:
       tags:
       - asset
-      summary: delete an existing Asset
       description: delete an existing Asset 
       # used as the method name of the controller
       operationId: deleteAsset
       parameters:
-      - name: assetID
+      - name: AssetID
         in: query
-        description: asset ID
+        required: true
+        type: string
+      - name: UserID
+        in: query
         required: true
         type: string
       responses:
