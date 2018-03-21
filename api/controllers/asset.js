@@ -456,7 +456,6 @@ function getDevicesFromAsset(assetid, callback){
 
   var assetsParams = {
     TableName : shareUtil.tables.assets,
-    //TableName : "Hx.Asset",
     KeyConditionExpression : "AssetID = :V1",
     ExpressionAttributeValues :  { ':V1' : assetid},
     ProjectionExpression : "Devices"
@@ -474,7 +473,7 @@ function getDevicesFromAsset(assetid, callback){
       //console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0)
       {
-        var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
+        var errmsg = {message: "AssetID does not exist or Asset does not contain any Device"};
         //res.status(400).send(errmsg);
         callback(false, msg);
       }
@@ -641,10 +640,12 @@ function deleteAssetByID(assetid, callback){
   };
   shareUtil.awsclient.delete(deleteParams, onDelete);
   function onDelete(err, data){
-    if (err) {
+    if (err)
+    {
       var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       callback(false, msg);
-    } else {
+    } else
+    {
       callback(true, null);
     }
   }

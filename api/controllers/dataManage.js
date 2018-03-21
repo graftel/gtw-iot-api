@@ -66,9 +66,11 @@ function pushData(req, res) {
     itemsToAddArray[index] = itemToAdd;
   }
 
+  var tablename = shareUtil.tables.rawData;
   var dataParams = {
     RequestItems : {
-      "Hx.RawData" : itemsToAddArray
+    //  "Hx.RawData" : itemsToAddArray
+      tablename : itemsToAddArray
     }
   }
 

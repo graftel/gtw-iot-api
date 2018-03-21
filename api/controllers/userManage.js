@@ -30,6 +30,7 @@ module.exports = {
 };
 
 function getDevicesFromUser(userid, callback) {
+
   var usersParams = {
     TableName : shareUtil.tables.users,
     //TableName : "Hx.Asset",
@@ -43,11 +44,10 @@ function getDevicesFromUser(userid, callback) {
     if (err)
     {
     var msg = "Error:" + JSON.stringify(err, null, 2);
-    //shareUtil.SendInternalErr(res, msg);
     callback(false, msg);
     } else
     {
-      //console.log(JSON.stringify(assetsParams, null ,2));
+    //  console.log(JSON.stringify(usersParams, null ,2));
       if (data.Count == 0)
       {
         var errmsg = {message: "UserID does not exist or User does not contain any Variable"};
@@ -424,8 +424,7 @@ function updateSettings(req, res) {
      });
   }
 }
-function updatePassword(req, res)
-{
+function updatePassword(req, res){
   var emailid = req.swagger.params.EmailAddress.value;
   var password = req.swagger.params.Password.value;
 
@@ -467,8 +466,7 @@ function updatePassword(req, res)
   }
 }
 
-function validateResetPasswordLink(req, res)
-{
+function validateResetPasswordLink(req, res){
   var emailid = req.swagger.params.EmailAddress.value;
   var vercode = req.swagger.params.VerificationCode.value;
 
@@ -644,8 +642,7 @@ function logIn(req, res){
   // this sends back a JSON response which is a single string
 }
 
-function activateUser(userid, callback)
-{
+function activateUser(userid, callback){
   var updateParams = {
         TableName : shareUtil.tables.users,
         Key : {

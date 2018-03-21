@@ -67,7 +67,6 @@ function removeDeviceFromAsset(req, res){
       shareUtil.SendInternalErr(res, msg);
     }
   });
-
 }
 
 
@@ -767,7 +766,7 @@ function updateDevice(req, res) {
 
 // Delete device by deviceID or by AssetID
 // requires also AssetID in argument to delete the device from the table Asset in the Devices list attribute
-function deleteDevice(req, res) {
+function deleteDeviceOld(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var deviceID = req.swagger.params.DeviceID.value;
   var assetID = req.swagger.params.AssetID.value;
@@ -907,6 +906,237 @@ function deleteDevice(req, res) {
     }
   });
   // this sends back a JSON response which is a single string
+}
+
+function deleteDevice(req, res) {
+
+  var deviceid = req.swagger.params.DeviceID.value;
+  var userid = req.swagger.params.UserID.value;
+  var assetid = req.swagger.params.AssetID.value;
+
+  userManage.getDevicesFromUser(userid, function(ret, data) {
+    if (ret)
+    {
+    var devices = data.Devices;
+    var deviceIndex = devices.indexOf(deviceid);
+    console.log("devices = " + devices);
+    console.log("deviceIndex = " + deviceIndex);
+
+    if(deviceIndex > -1)
+    {
+      // DeviceID is in User
+      removeDeviceFromUser(userid, deviceIndex, function(ret1, data1){
+        if (ret1)
+        {
+          deleteDeviceVariables(deviceid, function(ret2, data2) {
+            if (ret2)
+            {
+              if (assetid)
+              {
+                removeDeviceFromAssetinternal(deviceid, assetid, function(ret3, data3) {
+                  if (ret3)
+                  {
+                    deleteDeviceByID(deviceid, function(ret4, data4) {
+                      if (ret4){
+                        shareUtil.SendSuccess(res);
+                      } else {
+                        shareUtil.SendNotFound(res, data4);
+                      }
+                    });
+                  } else
+                  {
+                    var msg = "DeviceID not found in Asset";
+                    shareUtil.SendNotFound(res, msg);
+                  }
+                });
+              } else
+              {
+                // no AssetID provided
+                deleteDeviceByID(deviceid, function(ret4, data4) {
+                  if (ret4){
+                    shareUtil.SendSuccess(res);
+                  } else {
+                    shareUtil.SendNotFound(res, data4);
+                  }
+                });
+              }
+            } else
+            {
+              // deleteVariables failed
+              shareUtil.SendNotFound(res, data2);
+            }
+          });
+        } else
+        {
+          // remove device from User failed
+          shareUtil.SendNotFound(res, data1);
+        }
+      });
+    } else
+    {
+      //var msg = "";
+      shareUtil.SendNotFound(res, data);
+    }
+  }
+  else
+  {
+    var msg = "DeviceID not found in User";
+    shareUtil.SendNotFound(res, data);
+  }
+  });
+}
+
+function deleteDeviceByID(deviceid, callback) {
+
+  var deleteParams = {
+    TableName : shareUtil.tables.device,
+    Key : { DeviceID : deviceid }
+  };
+  shareUtil.awsclient.delete(deleteParams, onDelete);
+  function onDelete (err, data) {
+    if (err)
+    {
+      var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else
+    {
+      callback(true, null);
+    }
+  }
+}
+
+
+function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
+
+  asset.getDevicesFromAsset(assetid, function(ret, data) {
+  if (ret)
+  {
+    var deviceIndex = data.Devices.indexOf(deviceid);
+    var updateExpr = "remove Devices[" + deviceIndex + "]";
+
+    var updateAsset = {
+      TableName : shareUtil.tables.assets,
+      Key : {AssetID : assetid},
+      UpdateExpression : updateExpr
+    };
+    shareUtil.awsclient.update(updateAsset, onUpdate);
+    function onUpdate(err, data)
+    {
+      if (err)
+      {
+        var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+        callback(false, msg);
+      } else
+      {
+        console.log("devices deleted from Asset list of Devices!");
+        callback(true, null);
+      }
+    }
+  } else
+  {
+    var msg = "Error:" + JSON.stringify(data, null, 2);
+    shareUtil.SendInternalErr(res, msg);
+  }
+});
+}
+
+function getVariablesFromDevice(deviceid, callback){
+
+  var devicesParams = {
+    TableName : shareUtil.tables.device,
+    KeyConditionExpression : "DeviceID = :V1",
+    ExpressionAttributeValues :  { ':V1' : deviceid},
+    ProjectionExpression : "Variables"
+  };
+  shareUtil.awsclient.query(devicesParams, onQuery);
+  function onQuery(err, data)
+  {
+    if (err)
+    {
+    var msg = "Error:" + JSON.stringify(err, null, 2);
+    callback(false, msg);
+    } else
+    {
+      if (data.Count == 0)
+      {
+        var errmsg = {message: "DeviceID does not exist or Device does not contain any Variable"};
+        callback(false, msg);
+      }
+      else
+      {
+        callback(true, data.Items[0]);
+      }
+    }
+  }
+}
+
+function deleteDeviceVariables(deviceid, callback){
+
+  getVariablesFromDevice(deviceid, function(ret, data) {
+    if (ret)
+    {
+      var variables = data.Variables;
+      var itemsToDeleteArray = [];
+
+      for (index in variables){
+        var itemToDelete =
+        {
+          DeleteRequest : {
+            Key : {
+              "VariableID" : variables[index]
+            }
+          }
+        }
+        itemsToDeleteArray.push(itemToDelete);
+      }
+
+      var VariableTableName = shareUtil.tables.variable;
+      var deviceParams = {
+        RequestItems : {
+          VariableTableName : itemsToDeleteArray
+        }
+      }
+
+      console.log(JSON.stringify(deviceParams, null, 2));
+
+      shareUtil.awsclient.batchWrite(deviceParams, onDelete);
+      function onDelete(ret1, data1) {
+        if (ret1)
+        {
+          callback(true, null);   // variables deleted from Variable table
+        }
+        else
+        {
+          callback(false, data1);
+        }
+      }
+    } else
+    {
+      callback(false, data);
+    }
+  });
+}
+
+function removeDeviceFromUser(userid, index, callback) {
+
+  var updateExpr = "remove Devices[" + index + "]";
+
+  var updateParams = {
+    TableName : shareUtil.tables.users,
+    Key : {UserID : userid},
+    UpdateExpression : updateExpr
+  };
+  shareUtil.awsclient.update(updateParams, onUpdate);
+  function onUpdate(err, data) {
+    if (err)
+    {
+      var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else
+    {
+      callback(true, null);
+    }
+  }
 }
 
 
