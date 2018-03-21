@@ -582,7 +582,7 @@ function deleteVariableFromAsset(req, res) {
 
 function deleteAsset(req, res){
 
-  var assetid = req.swagger.params.assetID.value;
+  var assetid = req.swagger.params.AssetID.value;
   var userid = req.swagger.params.UserID.value;
 
   var userParams = {
@@ -609,7 +609,19 @@ function deleteAsset(req, res){
         var assetIndex = assets.indexOf(assetid);
         if (assetIndex > -1)
         {
-
+          removeAssetFromUser(userid, assetIndex, function(ret, data){
+            if (ret) {
+              deleteAssetByID(assetid, function(ret1, data1){
+                if (ret1) {
+                  shareUtil.SendSuccess(res);
+                } else {
+                  shareUtil.SendInvalidInput(res, data1);
+                }
+              })
+            } else {
+              shareUtil.SendInternalErr(res, data);
+            }
+          });
         } else
         {
           var msg = "asset not found in User";
@@ -620,62 +632,49 @@ function deleteAsset(req, res){
   }
 }
 
-function deleteAssetOld(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
-  var assetID = req.swagger.params.assetID.value;
 
-  var assetsParams = {
-     TableName : shareUtil.tables.assets,
-     ProjectionExpression: ["AssetID","AddTimeStamp","DisplayName","LastestTimeStamp","VerificationCode"],
-     FilterExpression : "AssetID = :v1",
-     ExpressionAttributeValues : {':v1' : assetID.toString()}
+function deleteAssetByID(assetid, callback){
+
+  var deleteParams = {
+    TableName : shareUtil.tables.assets,
+    Key : { AssetID : assetid}
   };
-  shareUtil.awsclient.scan(assetsParams, onScan);
-  function onScan(err, data) {
-       if (err) {
-           var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-           console.error(msg);
-           var errmsg = {
-             message: msg
-           };
-           res.status(500).send(errmsg);
-       } else {
-         if (data.Count == 0)
-         {
-           var errmsg = {
-             message: "Items not found"
-           };
-           res.status(404).send(errmsg);
-         }
-         else {
-             var Params = {
-                   TableName : shareUtil.tables.assets,
-                   Key : {
-                   AssetID : data.Items[0].AssetID,
-                   AddTimeStamp : data.Items[0].AddTimeStamp
-                 }
-               };
-            shareUtil.awsclient.delete(Params, function (err, data) {
-                if (err) {
-                    var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-                    console.error(msg);
-                    var errmsg = {
-                      message: msg
-                    };
-                    res.status(500).send(errmsg);
-                } else {
-                  var msg = {
-                    message: "Success"
-                  };
-                  console.log("asset deleted!");
-                  res.status(200).send(msg);
-                }
-             });
-         }
-
-       }
-   }
+  shareUtil.awsclient.delete(deleteParams, onDelete);
+  function onDelete(err, data){
+    if (err) {
+      var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else {
+      callback(true, null);
+    }
+  }
 }
+
+
+function removeAssetFromUser(userid, assetIndex, callback) {
+
+  var updateExpr = "remove Assets[" + assetIndex + "]";
+
+  var updateUser = {
+    TableName: shareUtil.tables.users,
+    Key: {UserID : userid},
+    UpdateExpression: updateExpr
+  };
+  shareUtil.awsclient.update(updateUser, onUpdate);
+  function onUpdate (err, data) {
+    if (err)
+    {
+      console.log("updateUser failed")
+      var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else {
+      console.log("user updated");
+      callback(true, null);
+    }
+  }
+}
+
+
 
 function IsAssetExist(assetID, callback) {
 
