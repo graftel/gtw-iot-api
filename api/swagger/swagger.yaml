@@ -688,6 +688,29 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /device/addDeviceToAsset:
+    x-swagger-router-controller: deviceManage
+    put:
+      tags:
+      - device
+      description: Add an existing Device to an Asset by AssetID and DeviceID
+      # used as the method name of the controller
+      operationId: addDeviceToAsset
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateAssetModel'
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /device/removeDeviceFromAsset:
     x-swagger-router-controller: deviceManage
     put:
@@ -1232,8 +1255,6 @@ definitions:
       AssetID:
         type: string
       DeviceID:
-       type: string
-      VariableID:
        type: string
   LogInModel:
     type: object
