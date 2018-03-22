@@ -466,9 +466,8 @@ function getDevicesFromAsset(assetid, callback){
     if (err)
     {
     var msg = "Error:" + JSON.stringify(err, null, 2);
-    //shareUtil.SendInternalErr(res, msg);
     callback(false, msg);
-    } else
+  } else
     {
       //console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0)
@@ -478,7 +477,7 @@ function getDevicesFromAsset(assetid, callback){
       }
       else
       {
-        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }

@@ -25,7 +25,10 @@ module.exports = {
   getDeviceAttributes: getDeviceAttributes,
   getDeviceByUser: getDeviceByUser,
   removeDeviceFromAsset: removeDeviceFromAsset,
-  addDeviceToAsset: addDeviceToAsset
+  addDeviceToAsset: addDeviceToAsset,
+  getDeviceByAssetID: getDeviceByAssetID,
+  getVariablesFromDevice: getVariablesFromDevice,
+  IsDeviceExist: IsDeviceExist
 };
 
 
@@ -1071,13 +1074,15 @@ function getVariablesFromDevice(deviceid, callback){
       }
       else
       {
+        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }
   }
 }
 
-function deleteDeviceVariables(deviceid, callback){
+
+function deleteDeviceVariables(deviceid, callback){   // !! Hx.Variable hardcoded !!
 
   getVariablesFromDevice(deviceid, function(ret, data) {
     if (ret)
@@ -1159,8 +1164,102 @@ function removeDeviceFromUser(userid, index, callback) {
 }
 
 
+function getDeviceByAsset(req, res){
+  var assetid = req.swagger.params.AssetID.value;
+  getDeviceByAssetID(assetid, function(ret, data) {
+    if (ret){
+      shareUtil.SendSuccessWithData(res, data);
+    } else {
+      shareUtil.SendNotFound(res, data);
+    }
+  });
+}
+
+function getDeviceByAssetID(assetid, callback) {
+  //var assetid = req.swagger.params.AssetID.value;
+  var devicesParams = {
+    TableName : shareUtil.tables.assets,
+    KeyConditionExpression : "AssetID = :V1",
+    ExpressionAttributeValues :  { ':V1' : assetid},
+    ProjectionExpression : "Devices"
+  };
+  shareUtil.awsclient.query(devicesParams, onQuery);
+  function onQuery(err, data)
+  {
+    if (err)
+    {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      //shareUtil.SendInternalErr(res, msg);
+      callback(false, msg);
+    } else
+     {
+      var sendData =
+      {
+        Items: [],
+        Count: 0
+      };
+      if (data.Count == 0)
+      {
+        var resErr = {ErrorMsg: "AssetID does not exit or Asset does not contain any Device"};
+        console.log(resErr);
+        var msg = "AssetID does not exit or Asset does not contain any Device";
+        //shareUtil.SendSuccessWithData(res, sendData);
+        //shareUtil.SendSuccessWithData(res, resErr);
+        callback(false, msg);
+      }
+      else
+      {
+        console.log("devices = " + devices);
+        console.log("data.count = " + data.Count);
+        var devices = data.Items[0].Devices;
+
+        if (typeof devices == "undefined")
+        {
+          var msg = "undefined";
+          console.log(msg);
+          //shareUtil.SendSuccessWithData(res, sendData);
+          callback(false, msg);
+        }
+        else
+        {
+          if (devices.length == 0)
+          {
+            var msg = "No devices found in Asset";
+            console.log(msg);
+            //shareUtil.SendSuccessWithData(res, sendData);
+            callback(false, msg);
+          }
+          else
+          {
+            console.log("devices: " + devices);
+            console.log("devices.length = " + devices.length);
+            var devicesToDelete = [];
+            var deleteIndex = 0;
+            getSingleDeviceInternal(0, devices, devicesToDelete, deleteIndex, null, function(devicesdata, devicesToDelete){
+              console.log("devicesToDelete -> " + devicesToDelete);
+              sendData.Items = devicesdata;
+              sendData.Count = devicesdata.length;
+              if (devicesToDelete.length == 0){     // no garbage Devices to delete in Asset's list of Devices
+                  //shareUtil.SendSuccessWithData(res, sendData);
+                  callback(true, sendData);
+              } else
+              {
+                deleteGarbageDevicesInAsset(assetid, devicesToDelete, function(){
+                //shareUtil.SendSuccessWithData(res, sendData);
+                callback(true, sendData);
+                });
+              }
+            });
+          }
+        }
+      }
+    }
+  }
+}
+
+
 //get list of devices by AssetID
-function getDeviceByAsset(req, res) {
+function getDeviceByAssetOld(req, res) {
   var assetid = req.swagger.params.AssetID.value;
   var devicesParams = {
     TableName : shareUtil.tables.assets,

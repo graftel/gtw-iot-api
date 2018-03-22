@@ -793,7 +793,7 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /variable/getVariableByDeviceID:
+  /variable/getVariableByDevice:
     x-swagger-router-controller: variableManage
     get:
       tags:
@@ -801,7 +801,7 @@ paths:
       summary: get all variable
       description: get all variable by DeviceID
       # used as the method name of the controller
-      operationId: getVariablebyDeviceID
+      operationId: getVariablebyDevice
       parameters:
       - name: DeviceID
         in: query
@@ -825,13 +825,13 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /variable/getVariableByAssetID:
+  /variable/getVariableByAsset:
     x-swagger-router-controller: variableManage
     get:
       tags:
       - variable
       description: get all variables in an Asset
-      operationId: getVariableByAssetID
+      operationId: getVariableByAsset
       parameters:
       - name: AssetID
         in: query
@@ -887,46 +887,16 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /variable/addVariableToDevice:
+  /variable/createVariable:
     x-swagger-router-controller: variableManage
     post:
       tags:
       - variable
-      summary: create a new variable
-      description: create a new variable
+      description: create a new variable and add it to a device
       # used as the method name of the controller
-      operationId: addVariableToDevice
+      operationId: createVariable
       parameters:
       - name: DeviceID
-        in: query
-        type: string
-      - in: body
-        name: body
-        description: Variable object thats needs to be added
-        required: true
-        schema:
-          $ref: '#/definitions/VariableModel'
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/SuccessResponse"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /variable/addVariableToAsset:
-    x-swagger-router-controller: variableManage
-    post:
-      tags:
-      - variable
-      summary: create a new variable
-      description: create a new variable
-      # used as the method name of the controller
-      operationId: addVariableToAsset
-      parameters:
-      - name: AssetID
         in: query
         type: string
       - in: body
@@ -990,10 +960,6 @@ paths:
         in: query
         description: Variable's DeviceID
         required: false
-        type: string
-      - name: AssetID
-        in: query
-        description: Variable's AssetID
         type: string
       responses:
         200:

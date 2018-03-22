@@ -1,25 +1,6 @@
-//var util = require('util');
+
 var shareUtil = require('./shareUtil.js');
-/*var AWS = require("aws-sdk");
-const os = require('os');
-AWS.config.loadFromPath(os.homedir() + '/.aws/config.json');
-var docClient = new AWS.DynamoDB.DocumentClient();
 
-const INVALID_INPUT = "Invalid Input";
-const ALREADY_EXIST = "Item Already Exist";
-const SUCCESS_MSG = "Success";
-const NOT_EXIST = "Item Not Exist";
-
-var tables = {
-    company: "Hx.Company",
-    users: "Hx.Users",
-    assets: "Hx.Assets",
-    deviceConfig: "Hx.DeviceConfiguration",
-    rawData: "Hx.RawData",
-    calculatedData: "Hx.CalculatedData",
-    alerts: "Hx.Alerts",
-    settings: "Hx.Settings"
-};*/
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -43,7 +24,7 @@ module.exports = {
 };
 
 
-function pushData(req, res) {
+function pushData(req, res) {     // !! Hx.Data hardcoded !!
 
   console.log("pushData entered")
   var dataobj = req.body;
@@ -67,7 +48,7 @@ function pushData(req, res) {
     itemsToAddArray[index] = itemToAdd;
   }
 
-  var tablename = shareUtil.tables.data;
+  var tablename =  shareUtil.tables.data;
   var dataParams = {
     RequestItems : {
       "Hx.Data" : itemsToAddArray
