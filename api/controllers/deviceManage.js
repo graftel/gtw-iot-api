@@ -917,25 +917,43 @@ function deleteDevice(req, res) {
   userManage.getDevicesFromUser(userid, function(ret, data) {
     if (ret)
     {
-    var devices = data.Devices;
-    var deviceIndex = devices.indexOf(deviceid);
-    console.log("devices = " + devices);
-    console.log("deviceIndex = " + deviceIndex);
+      var devices = data.Devices;
+      var deviceIndex = devices.indexOf(deviceid);
+      console.log("devices = " + devices);
+      console.log("deviceIndex = " + deviceIndex);
 
-    if(deviceIndex > -1)
-    {
-      // DeviceID is in User
-      removeDeviceFromUser(userid, deviceIndex, function(ret1, data1){
-        if (ret1)
+      if(devices.length > 0)
+      {
+        if(deviceIndex > -1)
         {
-          deleteDeviceVariables(deviceid, function(ret2, data2) {
-            if (ret2)
+          // DeviceID is in User
+          removeDeviceFromUser(userid, deviceIndex, function(ret1, data1){
+            if (ret1)
             {
-              if (assetid)
-              {
-                removeDeviceFromAssetinternal(deviceid, assetid, function(ret3, data3) {
-                  if (ret3)
+              deleteDeviceVariables(deviceid, function(ret2, data2) {
+                if (ret2)
+                {
+                  if (assetid)
                   {
+                    removeDeviceFromAssetInternal(deviceid, assetid, function(ret3, data3) {
+                      if (ret3)
+                      {
+                        deleteDeviceByID(deviceid, function(ret4, data4) {
+                          if (ret4){
+                            shareUtil.SendSuccess(res);
+                          } else {
+                            shareUtil.SendNotFound(res, data4);
+                          }
+                        });
+                      } else
+                      {
+                        var msg = "DeviceID not found in Asset";
+                        shareUtil.SendNotFound(res, data3);
+                      }
+                    });
+                  } else
+                  {
+                    // no AssetID provided
                     deleteDeviceByID(deviceid, function(ret4, data4) {
                       if (ret4){
                         shareUtil.SendSuccess(res);
@@ -943,46 +961,35 @@ function deleteDevice(req, res) {
                         shareUtil.SendNotFound(res, data4);
                       }
                     });
-                  } else
-                  {
-                    var msg = "DeviceID not found in Asset";
-                    shareUtil.SendNotFound(res, msg);
                   }
-                });
-              } else
-              {
-                // no AssetID provided
-                deleteDeviceByID(deviceid, function(ret4, data4) {
-                  if (ret4){
-                    shareUtil.SendSuccess(res);
-                  } else {
-                    shareUtil.SendNotFound(res, data4);
-                  }
-                });
-              }
+                } else
+                {
+                  // deleteVariables failed
+                  var msg = "Error " + JSON.stringify(data2, null, 2);
+                  shareUtil.SendNotFound(res, msg);
+                }
+              });
             } else
             {
-              // deleteVariables failed
-              shareUtil.SendNotFound(res, data2);
+              // remove device from User failed
+              shareUtil.SendNotFound(res, data1);
             }
           });
         } else
         {
-          // remove device from User failed
-          shareUtil.SendNotFound(res, data1);
+          var msg = "Device Not Found in User";
+          shareUtil.SendNotFound(res, msg);
         }
-      });
+      } else
+      {
+        var msg = "No Devices found in User";
+        shareUtil.SendNotFound(res, msg);
+      }
     } else
     {
-      //var msg = "";
+      var msg = "UserID does not exist or User does not contain any Variable";
       shareUtil.SendNotFound(res, data);
     }
-  }
-  else
-  {
-    var msg = "DeviceID not found in User";
-    shareUtil.SendNotFound(res, data);
-  }
   });
 }
 
@@ -1009,35 +1016,35 @@ function deleteDeviceByID(deviceid, callback) {
 function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
 
   asset.getDevicesFromAsset(assetid, function(ret, data) {
-  if (ret)
-  {
-    var deviceIndex = data.Devices.indexOf(deviceid);
-    var updateExpr = "remove Devices[" + deviceIndex + "]";
-
-    var updateAsset = {
-      TableName : shareUtil.tables.assets,
-      Key : {AssetID : assetid},
-      UpdateExpression : updateExpr
-    };
-    shareUtil.awsclient.update(updateAsset, onUpdate);
-    function onUpdate(err, data)
+    if (ret)
     {
-      if (err)
+      var deviceIndex = data.Devices.indexOf(deviceid);
+      var updateExpr = "remove Devices[" + deviceIndex + "]";
+
+      var updateAsset = {
+        TableName : shareUtil.tables.assets,
+        Key : {AssetID : assetid},
+        UpdateExpression : updateExpr
+      };
+      shareUtil.awsclient.update(updateAsset, onUpdate);
+      function onUpdate(err, data)
       {
-        var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-        callback(false, msg);
-      } else
-      {
-        console.log("devices deleted from Asset list of Devices!");
-        callback(true, null);
+        if (err)
+        {
+          var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else
+        {
+          console.log("devices deleted from Asset list of Devices!");
+          callback(true, null);
+        }
       }
+    } else
+    {
+      var msg = "Error:" + JSON.stringify(data, null, 2);
+      callback(false, msg);
     }
-  } else
-  {
-    var msg = "Error:" + JSON.stringify(data, null, 2);
-    shareUtil.SendInternalErr(res, msg);
-  }
-});
+  });
 }
 
 function getVariablesFromDevice(deviceid, callback){
@@ -1078,6 +1085,15 @@ function deleteDeviceVariables(deviceid, callback){
       var variables = data.Variables;
       var itemsToDeleteArray = [];
 
+      if (typeof variables == "undefined")
+      {
+        // Device dooes not contain any Variables
+        callback(true, null);
+      } else
+      {
+
+
+
       for (index in variables){
         var itemToDelete =
         {
@@ -1093,23 +1109,26 @@ function deleteDeviceVariables(deviceid, callback){
       var VariableTableName = shareUtil.tables.variable;
       var deviceParams = {
         RequestItems : {
-          VariableTableName : itemsToDeleteArray
+          "Hx.Variable" : itemsToDeleteArray
         }
       }
 
       console.log(JSON.stringify(deviceParams, null, 2));
 
       shareUtil.awsclient.batchWrite(deviceParams, onDelete);
-      function onDelete(ret1, data1) {
-        if (ret1)
+      function onDelete(err, data1) {
+        if (err)
         {
-          callback(true, null);   // variables deleted from Variable table
+          console.log("deleteVar failed");
+          callback(false, data1);
         }
         else
         {
-          callback(false, data1);
+          console.log("deleteVar success");
+          callback(true, null);   // variables deleted from Variable table
         }
       }
+    }
     } else
     {
       callback(false, data);

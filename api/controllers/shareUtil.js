@@ -14,7 +14,7 @@ var tables = {
     users: "Hx.Users",
     assets: "Hx.Asset",
     device: "Hx.Device",
-    rawData: "Hx.RawData",
+    data: "Hx.Data",
     calculatedData: "Hx.CalculatedData",
     variable: "Hx.Variable",
     param: "Hx.Parameters"

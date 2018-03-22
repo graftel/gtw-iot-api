@@ -43,20 +43,20 @@ function getDevicesFromUser(userid, callback) {
   {
     if (err)
     {
-    var msg = "Error:" + JSON.stringify(err, null, 2);
+    var msg = "Error in getDevicesFromUser:" + JSON.stringify(err, null, 2);
     callback(false, msg);
     } else
     {
     //  console.log(JSON.stringify(usersParams, null ,2));
-      if (data.Count == 0)
+      if (typeof data.Items[0] == "undefined" || data.Items[0].Devices.length == 0 ) 
       {
-        var errmsg = {message: "UserID does not exist or User does not contain any Variable"};
-        //res.status(400).send(errmsg);
+        var msg = "UserID does not exist or User does not contain any Device";
         callback(false, msg);
       }
       else
       {
-        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        console.log("datalength" +  data.Items[0].Devices.length);
+        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }

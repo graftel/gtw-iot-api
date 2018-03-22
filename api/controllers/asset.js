@@ -473,13 +473,12 @@ function getDevicesFromAsset(assetid, callback){
       //console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0)
       {
-        var errmsg = {message: "AssetID does not exist or Asset does not contain any Device"};
-        //res.status(400).send(errmsg);
+        var msg = "AssetID does not exist or Asset does not contain any Device";
         callback(false, msg);
       }
       else
       {
-        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }

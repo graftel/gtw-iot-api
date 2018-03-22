@@ -1,6 +1,6 @@
-var util = require('util');
+//var util = require('util');
 var shareUtil = require('./shareUtil.js');
-var AWS = require("aws-sdk");
+/*var AWS = require("aws-sdk");
 const os = require('os');
 AWS.config.loadFromPath(os.homedir() + '/.aws/config.json');
 var docClient = new AWS.DynamoDB.DocumentClient();
@@ -19,7 +19,7 @@ var tables = {
     calculatedData: "Hx.CalculatedData",
     alerts: "Hx.Alerts",
     settings: "Hx.Settings"
-};
+};*/
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -45,6 +45,7 @@ module.exports = {
 
 function pushData(req, res) {
 
+  console.log("pushData entered")
   var dataobj = req.body;
   var dataArray = dataobj.Data;
   var timestamp = dataobj.Timestamp;
@@ -66,17 +67,18 @@ function pushData(req, res) {
     itemsToAddArray[index] = itemToAdd;
   }
 
-  var tablename = shareUtil.tables.rawData;
+  var tablename = shareUtil.tables.data;
   var dataParams = {
     RequestItems : {
-    //  "Hx.RawData" : itemsToAddArray
-      tablename : itemsToAddArray
+      "Hx.Data" : itemsToAddArray
     }
   }
+
 
   shareUtil.awsclient.batchWrite(dataParams, onPut);
   function onPut(err, data) {
     if (err) {
+      console.log(JSON.stringify(dataParams, null, 2));
       var msg = "Error:" +  JSON.stringify(err, null, 2);
       console.error(msg);
       shareUtil.SendInternalErr(res,msg);
@@ -163,7 +165,7 @@ function addSingleData(deviceid, dataobj, index, callback) {
           var value = dataobj.Data[index].Value;
 
           var dataParams = {
-            TableName : shareUtil.tables.rawData,
+            TableName : shareUtil.tables.data,
             Item : {
               VariableID : variableid,
               EpochTimeStamp : timestamp,
@@ -301,7 +303,7 @@ function updateVariableIDInDevice(variableID, deviceID, callback) {
 function addRawData(variableid, timestamp, value, callback) {
 
   var dataParams = {
-    TableName : shareUtil.tables.rawData,
+    TableName : shareUtil.tables.data,
     Item : {
       VariableID : variableid,
       EpochTimeStamp : timestamp,
@@ -335,7 +337,7 @@ function getSingleData(req, res) {
   var dataTimeStamp = req.swagger.params.TimeStamp.value;
 
    var params = {
-     TableName: tables.rawData,
+     TableName: tables.data,
      KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp = :v2",
      ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStamp}
@@ -418,7 +420,7 @@ function getMultipleData(req, res) {
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
 
    var params = {
-     TableName: tables.rawData,
+     TableName: tables.data,
      KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp between :v2 and :v3",
      ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStampFrom,

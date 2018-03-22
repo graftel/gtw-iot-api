@@ -1039,8 +1039,7 @@ paths:
     put:
       tags:
       - data
-      summary: blalla
-      description: push data to rawData table using VarID and timestamp
+      description: push data to Data table using VarID and timestamp
       # used as the method name of the controller
       operationId: pushData
       parameters:
