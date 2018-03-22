@@ -19,7 +19,8 @@ module.exports = {
   deleteVariable: deleteVariable,
   getVariablebyDevice: getVariablebyDevice,
   getVariableAttributes: getVariableAttributes,
-  getVariableByAsset: getVariableByAsset
+  getVariableByAsset: getVariableByAsset,
+  IsVariableExist: IsVariableExist
 };
 
 

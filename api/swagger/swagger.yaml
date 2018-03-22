@@ -169,52 +169,6 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /asset/deleteDeviceFromAsset:
-    x-swagger-router-controller: asset
-    put:
-      tags:
-      - asset
-      description: Delete a device from Asset's list of Devices by AssetID and DeviceID
-      # used as the method name of the controller
-      operationId: deleteDeviceFromAsset
-      parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/UpdateAssetModel'
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/SuccessResponse"
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /asset/deleteVariableFromAsset:
-    x-swagger-router-controller: asset
-    put:
-      tags:
-      - asset
-      description: Delete a Parameter from Asset's list of Parameters by AssetID and ParamID
-      # used as the method name of the controller
-      operationId: deleteVariableFromAsset
-      parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/UpdateAssetModel'
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/SuccessResponse"
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
   /asset/deleteAsset:
     x-swagger-router-controller: asset
     delete:
@@ -637,57 +591,6 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /device/createDeviceToAsset:
-    x-swagger-router-controller: deviceManage
-    post:
-      tags:
-      - device
-      description: create a new device
-      # used as the method name of the controller
-      operationId: createDeviceToAsset
-      parameters:
-      - in: body
-        name: body
-        description: Device object thats need to be created
-        required: true
-        schema:
-          $ref: '#/definitions/DeviceModel'
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/SuccessResponse"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /device/addExistingDeviceBySerialNumber:
-    x-swagger-router-controller: deviceManage
-    post:
-      tags:
-      - device
-      summary: add an existing device to asset
-      description: add an existing device to asset by Serial Number, AssetID and Verification Code
-      # used as the method name of the controller
-      operationId: addExistingDeviceBySerialNumber
-      parameters:
-      - in: body
-        name: body
-        description: Device object thats need to be added
-        required: true
-        schema:
-          $ref: '#/definitions/DeviceModel'
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/SuccessResponse"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
   /device/addDeviceToAsset:
     x-swagger-router-controller: deviceManage
     put:
@@ -972,15 +875,14 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
 
-  /data/getSingleData:
+  /data/getSingleDataByVariableID:
     x-swagger-router-controller: dataManage
     get:
       tags:
       - data
-      summary: get a single data 
       description:  get a single data by device id and timestamp
       # used as the method name of the controller
-      operationId: getSingleData
+      operationId: getSingleDataByVariableID
       parameters:
       - name: VariableID
         in: query
@@ -1000,14 +902,14 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-  /data/pushData:
+  /data/addDataByVariableID:
     x-swagger-router-controller: dataManage
     put:
       tags:
       - data
       description: push data to Data table using VarID and timestamp
       # used as the method name of the controller
-      operationId: pushData
+      operationId: addDataByVariableID
       parameters:
       - in: body
         name: body
@@ -1059,103 +961,6 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/SuccessResponse"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /data/getSingleCalculatedData:
-    x-swagger-router-controller: dataManage
-    get:
-      tags:
-      - data
-      summary: get a single data 
-      description:  get a single data by Asset ID and time stamp
-      # used as the method name of the controller
-      operationId: getSingleCalculatedData
-      parameters:
-      - name: AssetID
-        in: query
-        required: true
-        type: string
-      - name: TimeStamp
-        in: query
-        required: true
-        type: integer
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/CalculatedDataModel"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /data/getMultipleCalculatedData:
-    x-swagger-router-controller: dataManage
-    get:
-      tags:
-      - data
-      summary: get multiple calculated data
-      description:  get multiple calculated data
-      # used as the method name of the controller
-      operationId: getMultipleCalculatedData
-      parameters:
-      - name: AssetID
-        in: query
-        description: Asset ID
-        required: true
-        type: string
-      - name: StartTimeStamp
-        in: query
-        required: true
-        type: integer
-      - name: EndTimeStamp
-        in: query
-        required: true
-        type: integer
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/CalculatedDataModel"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /data/getMultipleCalculatedDataWithParameter:
-    x-swagger-router-controller: dataManage
-    get:
-      tags:
-      - data
-      summary: get multiple calculated data
-      description:  get multiple calculated data
-      # used as the method name of the controller
-      operationId: getMultipleCalculatedDataWithParameter
-      parameters:
-      - name: AssetID
-        in: query
-        required: true
-        type: string
-      - name: StartTimeStamp
-        in: query
-        required: true
-        type: integer
-      - name: EndTimeStamp
-        in: query
-        required: true
-        type: integer
-      - name: ParameterID
-        in: query
-        required: true
-        type: string
-      responses:
-        200:
-          description: Success
-          schema:
-            $ref: "#/definitions/CalculatedDataModel"
         # responses may fall through to errors
         default:
           description: Error
@@ -1243,13 +1048,6 @@ definitions:
         type: string
       Password:
         type: string
-  CalculatedDataModel:
-    type: object
-    properties:
-      AssetID:
-        type: string
-      EpochTimeStamp:
-        type: integer
   DataModel:
     type: object
     properties:

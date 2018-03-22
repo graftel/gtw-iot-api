@@ -1,6 +1,6 @@
 
 var shareUtil = require('./shareUtil.js');
-
+var variableManage = require('./variableManage.js')
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -14,17 +14,77 @@ var shareUtil = require('./shareUtil.js');
   we specify that in the exports of this module that 'hello' maps to the function named 'hello'
  */
 module.exports = {
-  getSingleData: getSingleData,
+  getSingleDataByVariableID: getSingleDataByVariableID,
   getSingleCalculatedData: getSingleCalculatedData,
   getMultipleData: getMultipleData,
   getMultipleCalculatedData: getMultipleCalculatedData,
   getMultipleCalculatedDataWithParameter: getMultipleCalculatedDataWithParameter,
   addDataByDeviceID: addDataByDeviceID,
-  pushData: pushData
+  addDataByVariableID: addDataByVariableID
 };
 
 
-function pushData(req, res) {     // !! Hx.Data hardcoded !!
+function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback){
+  if (index < dataArray.length)
+  {
+    var variableid = dataArray[index].VariableID;
+    var value = dataArray[index].Value;
+    if (variableid)
+    {
+      if(value)
+      {
+        variableManage.IsVariableExist(variableid, function(ret, data) {
+          if (ret)
+          {
+            if(timestamp)
+            {
+              var itemToAdd =
+              {
+                PutRequest : {
+                  Item : {
+                    "VariableID" : variableid,
+                    "Value" : value,
+                    "EpochTimeStamp" : timestamp
+                  }
+                }
+              }
+            } else // no timestamp provided
+            {
+              var itemToAdd =
+              {
+                PutRequest : {
+                  Item : {
+                    "VariableID" : variableid,
+                    "Value" : value,
+                    "EpochTimeStamp" : Math.floor((new Date).getTime()/1000)
+                  }
+                }
+              }
+            }
+            itemsToAddArray.push(itemToAdd);
+          } else
+          {
+            var msg = "VariableID: " + variableid + " does not exist";
+            callback(false, msg);
+          }
+          fillDataArray(dataArray, timestamp, itemsToAddArray, index + 1, callback);
+        });
+      } else
+      {
+        var msg = "missing Value for VariableID: " + variableid + " (item number " + index + ")";
+        callback(false, msg);
+      }
+    } else
+    {
+      var msg = "missing VariableID for item number " + index;
+      callback(false, msg);
+    }
+  } else {
+    callback(true, itemsToAddArray);
+  }
+}
+
+function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
 
   console.log("pushData entered")
   var dataobj = req.body;
@@ -32,42 +92,33 @@ function pushData(req, res) {     // !! Hx.Data hardcoded !!
   var timestamp = dataobj.Timestamp;
   var itemsToAddArray = [];
 
-
-  for (index in dataArray) {
-    var itemToAdd =
+  fillDataArray(dataArray, timestamp, itemsToAddArray, 0, function(ret, data){
+    if(ret)
     {
-      PutRequest : {
-        Item : {
-          "VariableID" : dataArray[index].VariableID,
-          "Value" :  dataArray[index].Value,
-          "EpochTimeStamp" : timestamp
+      var dataParams = {
+        RequestItems : {
+          "Hx.Data" : itemsToAddArray
         }
       }
+      shareUtil.awsclient.batchWrite(dataParams, onPut);
+      function onPut(err, data) {
+        if (err)
+        {
+          console.log(JSON.stringify(dataParams, null, 2));
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          console.error(msg);
+          shareUtil.SendInternalErr(res,msg);
+        } else
+        {
+          console.log("write items succeeded !");
+          shareUtil.SendSuccess(res);
+        }
+      }
+    } else
+    {
+      shareUtil.SendNotFound(res, data);
     }
-
-    itemsToAddArray[index] = itemToAdd;
-  }
-
-  var tablename =  shareUtil.tables.data;
-  var dataParams = {
-    RequestItems : {
-      "Hx.Data" : itemsToAddArray
-    }
-  }
-
-
-  shareUtil.awsclient.batchWrite(dataParams, onPut);
-  function onPut(err, data) {
-    if (err) {
-      console.log(JSON.stringify(dataParams, null, 2));
-      var msg = "Error:" +  JSON.stringify(err, null, 2);
-      console.error(msg);
-      shareUtil.SendInternalErr(res,msg);
-    } else {
-      console.log("write items succeeded !");
-      shareUtil.SendSuccess(res);
-    }
-  }
+  });
 }
 
 
@@ -312,19 +363,19 @@ function addRawData(variableid, timestamp, value, callback) {
 
 
 
-function getSingleData(req, res) {
+function getSingleDataByVariableID(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableID = req.swagger.params.VariableID.value;
   var dataTimeStamp = req.swagger.params.TimeStamp.value;
 
    var params = {
-     TableName: tables.data,
+     TableName: shareUtil.tables.data,
      KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp = :v2",
      ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStamp}
    };
    console.log(params)
-   docClient.query(params, function(err, data) {
+   shareUtil.awsclient.query(params, function(err, data) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
@@ -334,7 +385,7 @@ function getSingleData(req, res) {
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
-        shareUtil.SendInvalidInput(res,NOT_EXIST);
+        shareUtil.SendInvalidInput(res, msg);
      }
      else if (data.Count == 1)
      {
