@@ -874,13 +874,12 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
-
   /data/getSingleDataByVariableID:
     x-swagger-router-controller: dataManage
     get:
       tags:
       - data
-      description:  get a single data by device id and timestamp
+      description:  get a single data by variable id and timestamp
       # used as the method name of the controller
       operationId: getSingleDataByVariableID
       parameters:
@@ -897,6 +896,44 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/DataModel"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+  /data/getMultipleDataByVariableID:
+    x-swagger-router-controller: dataManage
+    get:
+      tags:
+      - data
+      description:  get multiple data by variableID and timestamp
+      # used as the method name of the controller
+      operationId: getMultipleDataByVariableID
+      parameters:
+      - name: VariableID
+        in: query
+        required: true
+        type: string
+      - name: StartTimeStamp
+        in: query
+        required: true
+        type: integer
+      - name: EndTimeStamp
+        in: query
+        required: true
+        type: integer
+      responses:
+        200:
+          description: Success
+          schema:
+            type: object
+            properties:
+              Items:
+                type: array
+                items:
+                  $ref: "#/definitions/DataModel"
+              Count:
+                type: integer
         # responses may fall through to errors
         default:
           description: Error
@@ -937,8 +974,7 @@ paths:
     post:
       tags:
       - data
-      summary: get a single data 
-      description:  get a single data by device id and timestamp
+      description:  Add Data by device id and timestamp
       # used as the method name of the controller
       operationId: addDataByDeviceID
       parameters:
@@ -961,45 +997,6 @@ paths:
           description: Success
           schema:
             $ref: "#/definitions/SuccessResponse"
-        # responses may fall through to errors
-        default:
-          description: Error
-          schema:
-            $ref: "#/definitions/ErrorResponse"
-  /data/getMultipleData:
-    x-swagger-router-controller: dataManage
-    get:
-      tags:
-      - data
-      summary: get multiple data 
-      description:  get multiple data by variableID and timestamp
-      # used as the method name of the controller
-      operationId: getMultipleData
-      parameters:
-      - name: VariableID
-        in: query
-        required: true
-        type: string
-      - name: StartTimeStamp
-        in: query
-        required: true
-        type: integer
-      - name: EndTimeStamp
-        in: query
-        required: true
-        type: integer
-      responses:
-        200:
-          description: Success
-          schema:
-            type: object
-            properties:
-              Items:
-                type: array
-                items:
-                  $ref: "#/definitions/DataModel"
-              Count:
-                type: integer
         # responses may fall through to errors
         default:
           description: Error

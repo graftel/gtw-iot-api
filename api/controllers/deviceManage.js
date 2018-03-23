@@ -28,7 +28,8 @@ module.exports = {
   addDeviceToAsset: addDeviceToAsset,
   getDeviceByAssetID: getDeviceByAssetID,
   getVariablesFromDevice: getVariablesFromDevice,
-  IsDeviceExist: IsDeviceExist
+  IsDeviceExist: IsDeviceExist,
+  isItemInList: isItemInList
 };
 
 
@@ -208,67 +209,73 @@ function addDeviceInternal(deviceobj, res) {
     },
     ConditionExpression : "attribute_not_exists(DeviceID)"
   };
-
-  isDisplayNameUniqueInUser(deviceobj.DisplayName, deviceobj.UserID, function(ret, data) {
-    if (ret)
-    {
-      console.log("displayName unique");
-
-      params.Item = Object.assign(params.Item, deviceobj);
-      delete params.Item['UserID'];
-      delete params.Item['AssetID'];
-
-      shareUtil.awsclient.put(params, function(err, data) {
-        if (err)
-        {
-          var msg = "Error:" + JSON.stringify(err, null, 2);
-          console.error(msg);
-          shareUtil.SendInternalErr(res,msg);
-        } else
-        {
-          updateDeviceIDInUser(deviceID, deviceobj.UserID, function(ret1, data){
-            if (ret1)
-            {
-              if (deviceobj.AssetID)
-              {
-                updateDeviceIDInAsset(deviceID, deviceobj.AssetID, function(ret2, data){
-                  if (ret2){
-                    shareUtil.SendSuccess(res);
-                  } else
-                  {
-                    var msg = "Error:" + JSON.stringify(data);
-                    shareUtil.SendInternalErr(res,msg);
-                  }
-                });
-              } else
-              {
-                shareUtil.SendSuccess(res);
-              }
-            } else
-            {
-              var msg = "Error:" + JSON.stringify(data);
-              shareUtil.SendInternalErr(res,msg);
-            }
-          });
-        }
-      });
-    } else
-    {
-    console.log("displayName not unique")
-    var uniqNumb = 1;
-    var newDisplayName = deviceobj.DisplayName + uniqNumb;
-    isDisplayNameUniqueInUser(newDisplayName, deviceobj.UserID, function(ret, data) {
+  if(deviceobj.DisplayName)
+  {
+    isDisplayNameUniqueInUser(deviceobj.DisplayName, deviceobj.UserID, function(ret, data) {
       if (ret)
       {
+        console.log("displayName unique");
 
+        params.Item = Object.assign(params.Item, deviceobj);
+        delete params.Item['UserID'];
+        delete params.Item['AssetID'];
+
+        shareUtil.awsclient.put(params, function(err, data) {
+          if (err)
+          {
+            var msg = "Error:" + JSON.stringify(err, null, 2);
+            console.error(msg);
+            shareUtil.SendInternalErr(res,msg);
+          } else
+          {
+            updateDeviceIDInUser(deviceID, deviceobj.UserID, function(ret1, data){
+              if (ret1)
+              {
+                if (deviceobj.AssetID)
+                {
+                  updateDeviceIDInAsset(deviceID, deviceobj.AssetID, function(ret2, data){
+                    if (ret2){
+                      shareUtil.SendSuccess(res);
+                    } else
+                    {
+                      var msg = "Error:" + JSON.stringify(data);
+                      shareUtil.SendInternalErr(res,msg);
+                    }
+                  });
+                } else
+                {
+                  shareUtil.SendSuccess(res);
+                }
+              } else
+              {
+                var msg = "Error:" + JSON.stringify(data);
+                shareUtil.SendInternalErr(res,msg);
+              }
+            });
+          }
+        });
       } else
       {
+      console.log("displayName not unique");
+      /*var uniqNumb = 1;
+      var newDisplayName = deviceobj.DisplayName + uniqNumb;
+      isDisplayNameUniqueInUser(newDisplayName, deviceobj.UserID, function(ret, data) {
+        if (ret)
+        {
 
+        } else
+        {
+
+        }
+      });*/
+      shareUtil.SendInvalidInput(res, data);
       }
     });
-    shareUtil.SendInvalidInput(res, data);
+  } else
+  {
+    var msg = "DisplayName missing";
+    shareUtil.SendInvalidInput(res, msg);
   }
-});
 }
 
 
@@ -508,46 +515,52 @@ function createDevice(req, res) {
   var displayName = deviceobj.DisplayName;
   var userid = deviceobj.UserID;
 
-  IsUserExist(deviceobj.UserID, function(ret, data){
-    if (ret){
-      if(deviceobj.DeviceID)
-      {
-        IsDeviceExist(deviceobj.DeviceID, function(ret1, data1)
+  if(userid)
+  {
+    IsUserExist(deviceobj.UserID, function(ret, data){
+      if (ret){
+        if(deviceobj.DeviceID)
         {
-          if (ret1)
+          IsDeviceExist(deviceobj.DeviceID, function(ret1, data1)
           {
-            var msg = "DeviceID already exists";
-            shareUtil.SendInvalidInput(res, msg);
-          } else
-          {
-            if (deviceobj.SerialNumber)
+            if (ret1)
             {
-              IsDeviceSerialNumberUniqueInUser(deviceobj.SerialNumber, deviceobj.UserID, function(ret,data)
-              {
-                if (ret)
-                {
-                  addDeviceInternal(deviceobj, res);
-                } else
-                {
-                  var msg = "Serial Number Already Exists";
-                  shareUtil.SendInvalidInput(res, msg);
-                }
-              });
+              var msg = "DeviceID already exists";
+              shareUtil.SendInvalidInput(res, msg);
             } else
             {
-              addDeviceInternal(deviceobj, res);
+              if (deviceobj.SerialNumber)
+              {
+                IsDeviceSerialNumberUniqueInUser(deviceobj.SerialNumber, deviceobj.UserID, function(ret,data)
+                {
+                  if (ret)
+                  {
+                    addDeviceInternal(deviceobj, res);
+                  } else
+                  {
+                    var msg = "Serial Number Already Exists";
+                    shareUtil.SendInvalidInput(res, msg);
+                  }
+                });
+              } else
+              {
+                addDeviceInternal(deviceobj, res);
+              }
             }
-          }
-        });
-      } else {
-        addDeviceInternal(deviceobj, res);
+          });
+        } else {
+          addDeviceInternal(deviceobj, res);
+        }
+      } else
+      {
+        msg = "UserID not found";
+        shareUtil.SendNotFound(res, msg);
       }
-    } else
-    {
-      msg = "UserID not found";
-      shareUtil.SendNotFound(res, msg);
-    }
-  });
+    });
+  } else {
+    var msg = "UserID missing";
+    shareUtil.SendInvalidInput(res, msg);
+  }
 }
 
 
@@ -649,7 +662,7 @@ function isDisplayNameUniqueInUser(displayName, userid, callback){
   });
 }
 
-function isItemInList(item, itemList, callback){
+function isItemInList(item, itemList, callback){    //return true if item IS in the list
 
   if (itemList.indexOf(item) > -1)
   {
@@ -658,6 +671,7 @@ function isItemInList(item, itemList, callback){
     callback(false, msg);
   } else
   {
+    console.log("item not in the list")
     callback(true, null);
   }
 }
@@ -1051,7 +1065,6 @@ function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
 }
 
 function getVariablesFromDevice(deviceid, callback){
-
   var devicesParams = {
     TableName : shareUtil.tables.device,
     KeyConditionExpression : "DeviceID = :V1",
@@ -1063,8 +1076,9 @@ function getVariablesFromDevice(deviceid, callback){
   {
     if (err)
     {
-    var msg = "Error:" + JSON.stringify(err, null, 2);
-    callback(false, msg);
+      console.log("devicesParams = " + JSON.stringify(devicesParams, null, 2));
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      callback(false, msg);
     } else
     {
       if (data.Count == 0)

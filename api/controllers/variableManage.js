@@ -122,34 +122,139 @@ function addVariableInternal(variableobj, deviceid, res) {
     },
     ConditionExpression : "attribute_not_exists(VariableID)"
   };
-  params.Item = Object.assign(params.Item, variableobj);
-  delete params.Item['DeviceID'];
+  console.log("variableobj.DevID = " + deviceid);
+  if(variableobj.VariableName){
+    isVariableNameUniqueInDevice(variableobj.VariableName, deviceid, function(ret, data) {
+      if (ret) {
+        params.Item = Object.assign(params.Item, variableobj);
+        delete params.Item['DeviceID'];
 
-  shareUtil.awsclient.put(params, function(err, data) {
-    if (err) {
-        var msg = "Error:" + JSON.stringify(err, null, 2);
-        shareUtil.SendInternalErr(res,msg);
-    }else{
-        if (deviceid)
-        {
-            updateVariableIDInDevice(variableID, deviceid, function(ret1, data){
-              if (ret1){
-                shareUtil.SendSuccess(res);
-              }
-              else{
-                var msg = "Error:" + JSON.stringify(data) + "update failed";
-                shareUtil.SendInternalErr(res,msg);
-              }
-             });
-        }
-        else
-        {
-          console.log("variableID = "+ variableID);
-          shareUtil.SendSuccess(res);
-        }
+        shareUtil.awsclient.put(params, function(err, data) {
+          if (err) {
+            var msg = "Error:" + JSON.stringify(err, null, 2);
+            shareUtil.SendInternalErr(res,msg);
+          }else{
+            if (deviceid)
+            {
+              updateVariableIDInDevice(variableID, deviceid, function(ret1, data){
+                if (ret1)
+                {
+                  shareUtil.SendSuccess(res);
+                } else
+                {
+                  var msg = "Error:" + JSON.stringify(data) + "update failed";
+                  shareUtil.SendInternalErr(res,msg);
+                }
+              });
+            } else
+            {
+              console.log("variableID = "+ variableID);
+              shareUtil.SendSuccess(res);
+            }
+          }
+        });
+      } else {
+        shareUtil.SendNotFound(res, data);
+      }
+    });
+  } else
+  {
+    var msg ="VariableName missing";
+    shareUtil.SendInvalidInput(res, msg);
+  }
+}
 
+function isVariableNameUniqueInDevice(variableName, deviceid, callback){
+  deviceManage.getVariablesFromDevice(deviceid, function(ret, data){
+    if (ret)
+    {
+      var variables = data.Variables;
+      //console.log("variables = " + variables);
+      //var variableNameList = []
+      getVariableNameList(variables, 0, function(ret1, data1) {
+        if (ret1)
+        {
+          var variableNameList = data1.Responses["Hx.Variable"];
+          //console.log("variableNameList" + JSON.stringify(variableNameList, null, 2));
+          var arrayList = [];
+          convertJSONListToArray(variableNameList, arrayList, 0, function(ret2, data2){
+            if(ret){
+              deviceManage.isItemInList(variableName, data2, function(ret2, data2) { //return true if item IS in the list
+                if (ret2)
+                {
+                  callback(true, null);
+                } else
+                {
+                  var msg = "variableName not unique";
+                  callback(false, msg)
+                }
+              });
+            }
+          });
+        } else
+        {
+          callback(false, data1);
+        }
+      })
+
+    } else
+    {
+      callback(false, data);
     }
   });
+}
+
+function convertJSONListToArray(JSONlist, array, index, callback){
+  if(index < JSONlist.length) {
+    array.push(JSONlist[index].VariableName);
+    convertJSONListToArray(JSONlist, array, index+1, callback);
+  } else {
+    callback(true, array);
+    //console.log("array = " + array);
+  }
+}
+
+function getVariableNameList(variablesArrayID, index, callback) {   // Can improve speed of this function by doing only one query with all the DeviceID rather than doing a query for each DeviceID
+  console.log("getVariableNameList entered");
+  var itemsToGetArray = [];
+  fillParamsArray(variablesArrayID, itemsToGetArray, 0, function(ret, data){
+    if (ret) {
+      var variablesParam = {
+        RequestItems : {
+          "Hx.Variable" : {
+            Keys : data,    //itemsToAddArray
+            ProjectionExpression : "VariableName"
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(variablesParam, onGet);
+      function onGet(err, data1){
+        if (err){
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else
+        {
+          callback(true, data1);
+        }
+      }
+    } else {
+      shareUtil.SendNotFound(res, data);
+    }
+  });
+}
+
+function fillParamsArray(variablesArrayID, itemsToGetArray, index, callback){
+  if(index < variablesArrayID.length){
+    var variableid = variablesArrayID[index];
+    var itemToGet =
+    {
+      "VariableID" : variableid
+    }
+    itemsToGetArray.push(itemToGet);
+    fillParamsArray(variablesArrayID, itemsToGetArray, index+1, callback);
+  } else {
+    callback(true, itemsToGetArray);
+  }
 }
 
 

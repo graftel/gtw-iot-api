@@ -15,10 +15,7 @@ var variableManage = require('./variableManage.js')
  */
 module.exports = {
   getSingleDataByVariableID: getSingleDataByVariableID,
-  getSingleCalculatedData: getSingleCalculatedData,
-  getMultipleData: getMultipleData,
-  getMultipleCalculatedData: getMultipleCalculatedData,
-  getMultipleCalculatedDataWithParameter: getMultipleCalculatedDataWithParameter,
+  getMultipleDataByVariableID: getMultipleDataByVariableID,
   addDataByDeviceID: addDataByDeviceID,
   addDataByVariableID: addDataByVariableID
 };
@@ -445,21 +442,21 @@ function getSingleCalculatedData(req, res) {
 
 
 
-function getMultipleData(req, res) {
+function getMultipleDataByVariableID(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableID = req.swagger.params.VariableID.value;
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
 
    var params = {
-     TableName: tables.data,
+     TableName: shareUtil.tables.data,
      KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp between :v2 and :v3",
      ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStampFrom,
                                   ':v3' : dataTimeStampTo}
    };
    console.log(params)
-   docClient.query(params, function(err, data) {
+   shareUtil.awsclient.query(params, function(err, data) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
@@ -469,16 +466,14 @@ function getMultipleData(req, res) {
      if (data.Count == 0)
      {
       var msg = "Error: Cannot find data"
-      shareUtil.SendInvalidInput(res,NOT_EXIST);
+      shareUtil.SendInvalidInput(res, msg);
      }
      else {
         delete data["ScannedCount"];
         shareUtil.SendSuccessWithData(res, data);
      }
-
    }
  });
-  // this sends back a JSON response which is a single string
 }
 
 function getMultipleCalculatedData(req, res) {
