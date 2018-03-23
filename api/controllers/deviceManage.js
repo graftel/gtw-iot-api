@@ -1088,7 +1088,7 @@ function getVariablesFromDevice(deviceid, callback){
       }
       else
       {
-        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }

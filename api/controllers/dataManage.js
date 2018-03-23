@@ -1,6 +1,7 @@
 
 var shareUtil = require('./shareUtil.js');
-var variableManage = require('./variableManage.js')
+var variableManage = require('./variableManage.js');
+var deviceManage = require('./deviceManage.js');
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -119,9 +120,7 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
 }
 
 
-
-
-function addDataByDeviceID(req, res) {
+function addDataByDeviceIDOld(req, res) {
 
   var deviceid = req.swagger.params.DeviceID.value;
   var dataobj = req.body;
@@ -154,7 +153,114 @@ function addDataByDeviceID(req, res) {
   }
 }
 
+function addDataByDeviceID(req, res) {
+  var deviceid = req.swagger.params.DeviceID.value;
+  var dataobj = req.body;
+  var data = dataobj.Data;
+  var timestamp = dataobj.Timestamp;
 
+  console.log("data = " + JSON.stringify(data.Data, null, 2));
+  var dataTest = data.Data[0];
+  var dataTest2 = "Value" + ":" + "test";
+  dataTest += dataTest;
+  var testData = {}
+  var testDataArray = [];
+
+  if(deviceid){
+    deviceManage.getVariablesFromDevice(deviceid, function(ret1, data1){
+      if (ret1) {
+        var variableidList = data1.Variables;
+        var getItems = [];
+        batchGetItem(variableidList, getItems, function(ret2, data2){
+          if(ret2){
+            var varIDtoNameMap = data2.Responses["Hx.Variable"];
+            console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
+
+          /*  varIDtoNameMap[0].Value = "valueTest";
+            console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
+            testData.VariableID = "varid";
+            testData.VariableName = "varname";
+            testData.Value = "value";
+            testDataArray.push(testData);
+            testDataArray.push(testData);
+            testDataArray.push(testData);
+            console.log("testDataArray = " + JSON.stringify(testDataArray[0].VariableID, null, 2));*/
+
+
+            mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index, callback)
+
+            shareUtil.SendSuccess(res);
+          } else {
+            shareUtil.SendNotFound(res, data2);
+          }
+        });
+      } else { // no Variables found in Device
+        shareUtil.SendNotFound(res);
+      }
+    });
+  } else {
+      var msg = "DeviceID missing";
+      shareUtil.SendInvalidInput(res, msg);
+  }
+}
+
+
+//not going to work because have to make search not on index but on key
+//have to find a solution for the difference of length of the 2 arrays
+function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index, callback) {
+
+  if (index < varNameToValueMap.length) {
+    var varName = varIDtoNameMap[index].VariableName;
+    var varValue = varNameToValueMap[varName];
+    var item = {};
+    item.VariableID = varIDtoNameMap[index].VariableID;
+    item.Value = varValue;
+    valueToVarIDMap.push(item);
+    mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index+1, callback);
+  } else {
+    callback(true, valueToVarIDMap)
+  }
+}
+
+function batchGetItem(variableidList, getItems, callback){
+  fillBatchGetItem(variableidList, getItems, 0, function(ret, data) {
+    if (ret) {
+      var dataParams = {
+        RequestItems : {
+          "Hx.Variable" : {
+            Keys : data,
+            ProjectionExpression : "VariableID, VariableName"
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(dataParams, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function fillBatchGetItem(variableidList, getItems, index, callback) {
+  if (index < variableidList.length){
+    var getItem = {
+      "VariableID" : variableidList[index]
+    }
+    getItems.push(getItem);
+    //console.log("getItem = " + JSON.stringify(getItem, null, 2));
+    fillBatchGetItem(variableidList, getItems, index+1, callback);
+  } else {
+    callback(true, getItems);
+  //  console.log("getItems = " + JSON.stringify(getItems, null, 2));
+  }
+}
 
 function addSingleData(deviceid, dataobj, index, callback) {
 
@@ -440,8 +546,6 @@ function getSingleCalculatedData(req, res) {
   });
 }
 
-
-
 function getMultipleDataByVariableID(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableID = req.swagger.params.VariableID.value;
@@ -475,6 +579,7 @@ function getMultipleDataByVariableID(req, res) {
    }
  });
 }
+
 
 function getMultipleCalculatedData(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}

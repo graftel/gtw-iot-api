@@ -987,9 +987,9 @@ paths:
         schema: 
           properties:
             Data:
-              type: array
-              items: 
-                $ref: '#/definitions/AddDataModel'
+            # type: object
+              #items: 
+              $ref: '#/definitions/AddDataByVarNameModel'
             Timestamp:
               type: integer
       responses:
@@ -1078,6 +1078,16 @@ definitions:
         type: string
       Value:
         type: string
+  AddDataByVarNameModel:
+    type: object
+    properties:
+      Data:
+        type: array
+        items:
+          type: object
+          properties:
+            VariableName:
+              type: string
   VariableModel:
     type: object
     properties:

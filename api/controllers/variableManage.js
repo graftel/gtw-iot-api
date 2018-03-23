@@ -214,7 +214,7 @@ function convertJSONListToArray(JSONlist, array, index, callback){
   }
 }
 
-function getVariableNameList(variablesArrayID, index, callback) {   // Can improve speed of this function by doing only one query with all the DeviceID rather than doing a query for each DeviceID
+function getVariableNameList(variablesArrayID, index, callback) {   
   console.log("getVariableNameList entered");
   var itemsToGetArray = [];
   fillParamsArray(variablesArrayID, itemsToGetArray, 0, function(ret, data){
