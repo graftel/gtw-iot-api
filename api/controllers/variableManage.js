@@ -133,7 +133,7 @@ function addVariableInternal(variableobj, deviceid, res) {
           if (err) {
             var msg = "Error:" + JSON.stringify(err, null, 2);
             shareUtil.SendInternalErr(res,msg);
-          }else{
+          } else {
             if (deviceid)
             {
               updateVariableIDInDevice(variableID, deviceid, function(ret1, data){
@@ -214,7 +214,7 @@ function convertJSONListToArray(JSONlist, array, index, callback){
   }
 }
 
-function getVariableNameList(variablesArrayID, index, callback) {   
+function getVariableNameList(variablesArrayID, index, callback) {
   console.log("getVariableNameList entered");
   var itemsToGetArray = [];
   fillParamsArray(variablesArrayID, itemsToGetArray, 0, function(ret, data){
