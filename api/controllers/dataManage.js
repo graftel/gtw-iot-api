@@ -169,13 +169,10 @@ function addDataByDeviceID(req, res) {
   var dataobj = req.body;
   var data = dataobj.Data;
   var timestamp = dataobj.Timestamp;
-
-  console.log("data = " + JSON.stringify(data.Data, null, 2));
-  var dataTest = data.Data[0];
-  var dataTest2 = "Value" + ":" + "test";
-  dataTest += dataTest;
-  var testData = {}
-  var testDataArray = [];
+  if (!timestamp) {
+    timestamp = Math.floor((new Date).getTime()/1000);
+    console.log("timestamp = " + timestamp);
+  }
 
   if(deviceid){
     deviceManage.getVariablesFromDevice(deviceid, function(ret1, data1){
@@ -183,8 +180,6 @@ function addDataByDeviceID(req, res) {
         var variableidList = data1.Variables;
         var getItems = [];
         console.log("variableidList = " + variableidList);
-        //var indexTest = variableidList.indexOf("d96e7cc0-2dfe-11e8-8d51-774c7976c1d2");
-        //console.log("indexTest = " + indexTest);
         batchGetItem(variableidList, getItems, function(ret2, data2){
           if(ret2){
             var varIDtoNameMap = data2.Responses["Hx.Variable"];
@@ -242,8 +237,8 @@ function addDataByDeviceID(req, res) {
 
 
 function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index, deviceid, callback) {
-//  console.log("varNameToValueMap = " + JSON.stringify(varNameToValueMap, null, 2));
-//  console.log(" length = " + Object.keys(varNameToValueMap).length);
+  //  console.log("varNameToValueMap = " + JSON.stringify(varNameToValueMap, null, 2));
+  //  console.log(" length = " + Object.keys(varNameToValueMap).length);
   if (index < Object.keys(varNameToValueMap).length) {
     var varName = Object.keys(varNameToValueMap)[index];
     var varValue = varNameToValueMap[varName];
