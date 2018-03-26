@@ -471,6 +471,29 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /user/getUserIDbyApiKey:
+    x-swagger-router-controller: userManage
+    get:
+      tags:
+      - user
+      description: get the UserID using the Api-Key
+      operationId: getUserbyApiKey
+      parameters:
+      - name: ApiKey
+        description: bf
+        required: true
+        in: query
+        type: string
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/UserModel"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /device/getDeviceByAsset:
     x-swagger-router-controller: deviceManage
     get:

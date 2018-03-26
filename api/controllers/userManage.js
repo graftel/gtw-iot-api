@@ -26,7 +26,8 @@ module.exports = {
   validateResetPasswordLink: validateResetPasswordLink,
   updatePassword: updatePassword,
   updateUserAsset: updateUserAsset,
-  getDevicesFromUser: getDevicesFromUser
+  getDevicesFromUser: getDevicesFromUser,
+  getUserbyApiKey: getUserbyApiKey
 };
 
 function getDevicesFromUser(userid, callback) {
@@ -48,7 +49,7 @@ function getDevicesFromUser(userid, callback) {
     } else
     {
     //  console.log(JSON.stringify(usersParams, null ,2));
-      if (typeof data.Items[0] == "undefined" || data.Items[0].Devices.length == 0 ) 
+      if (typeof data.Items[0] == "undefined" || data.Items[0].Devices.length == 0 )
       {
         var msg = "UserID does not exist or User does not contain any Device";
         callback(false, msg);
@@ -573,7 +574,7 @@ function authenticate(apikey, callback) {
    TableName : shareUtil.tables.users,
    FilterExpression : "ApiKey = :v1",
    ExpressionAttributeValues : {':v1' : apikey.toString()}
-};
+ };
   shareUtil.awsclient.scan(Params, onScan);
   function onScan(err, data) {
      if (err) {
@@ -663,7 +664,7 @@ function IsEmailExist(email, callback){
    TableName : shareUtil.tables.users,
    FilterExpression : "EmailAddress = :v1",
    ExpressionAttributeValues : {':v1' : email.toString()}
-};
+ };
   shareUtil.awsclient.scan(Params, onScan);
   function onScan(err, data) {
      if (err) {
@@ -682,7 +683,32 @@ function IsEmailExist(email, callback){
   }
 }
 
-
+function getUserbyApiKey(req, res) {
+  var ApiKey = req.swagger.params.ApiKey.value;
+  console.log("fn entered");
+  params = {
+    TableName : shareUtil.tables.users,
+    IndexName : "ApiKey-index",
+    KeyConditionExpression : "ApiKey = :v1",
+    ExpressionAttributeValues : { ':v1' : ApiKey},
+    ProjectionExpression : "UserID, Devices"
+  }
+  console.log(params);
+  shareUtil.awsclient.query(params, onQuery);
+  function onQuery(err, data) {
+    if (err){
+      var msg = JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res, msg);
+    } else {
+      console.log("data = " + JSON.stringify(data, null, 2));
+      if (data.Count == 0) {
+        var msg = "No user associated with this ApiKey";
+        shareUtil.SendNotFound(res, msg);
+      }
+      shareUtil.SendSuccessWithData(res, data);
+    }
+  }
+}
 
 function sendForgotPasswordEmail(emailid, VerificationCode) {
   const sgMail = require('@sendgrid/mail');

@@ -570,8 +570,6 @@ function addRawData(variableid, timestamp, value, callback) {
   }
 }
 
-
-
 function getSingleDataByVariableID(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableID = req.swagger.params.VariableID.value;
