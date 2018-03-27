@@ -445,7 +445,7 @@ function updateVariable(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableobj = req.body;
   var isValid = true;
-  console.log(variableobj);
+  //console.log(variableobj);
   if(variableobj.constructor === Object && Object.keys(variableobj).length === 0) {
     SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
@@ -1163,7 +1163,7 @@ function IsVariableExist(variableID, callback) {
      KeyConditionExpression : "VariableID = :v1",
      ExpressionAttributeValues : {':v1' : variableID.toString()}
   };
-  console.log(variableID.toString());
+  //  console.log(variableID.toString());
   shareUtil.awsclient.query(Params, onQuery);
   function onQuery(err, data)
   {

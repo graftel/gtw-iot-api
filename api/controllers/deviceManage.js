@@ -31,7 +31,8 @@ module.exports = {
   IsDeviceExist: IsDeviceExist,
   isItemInList: isItemInList,
   getDevicesByName : getDevicesByName,
-  getDevicesDisplayName : getDevicesDisplayName
+  getDevicesDisplayName : getDevicesDisplayName,
+  getDeviceIdBySerialNumber: getDeviceIdBySerialNumber
 };
 
 
@@ -75,7 +76,6 @@ function removeDeviceFromAsset(req, res){
   });
 }
 
-
 function addDeviceToAsset(req, res) {
   var deviceobj = req.body;
   var assetid = deviceobj.AssetID;
@@ -102,7 +102,6 @@ function addDeviceToAsset(req, res) {
     }
   });
 }
-
 
 function updateDeviceIDInUser(deviceID, userID, callback) {
   if(!userID)
@@ -280,8 +279,6 @@ function addDeviceInternal(deviceobj, res) {
   }
 }
 
-
-
 function updateDeviceIDInAsset(deviceID, assetID, callback) {
   if(!assetID)
   {
@@ -365,10 +362,6 @@ function checkDeviceInAsset(deviceID, assetID, callback) {
     }
   });
 }
-
-
-
-
 
 function addExistingDeviceBySerialNumber(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
@@ -509,8 +502,6 @@ function createDeviceToAsset(req, res) {
   });
 }
 
-
-
 function createDevice(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var deviceobj = req.body;
@@ -564,7 +555,6 @@ function createDevice(req, res) {
     shareUtil.SendInvalidInput(res, msg);
   }
 }
-
 
 function IsDeviceSerialNumberUniqueInUser(serialNumber, userid, callback) {
 
@@ -627,8 +617,6 @@ function getSerialNumberList(devicesArrayID, index, serialNumberList, callback) 
     callback(true, serialNumberList, null);
   }
 }
-
-
 
 function isDisplayNameUniqueInUser(displayName, userid, callback){
 
@@ -706,9 +694,6 @@ function getDisplayNameList(devicesArrayID, index, displayNameList, callback) { 
   }
 }
 
-
-
-
 function updateDevice(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var deviceobj = req.body;
@@ -780,8 +765,6 @@ function updateDevice(req, res) {
   }
   // this sends back a JSON response which is a single string
 }
-
-
 
 // Delete device by deviceID or by AssetID
 // requires also AssetID in argument to delete the device from the table Asset in the Devices list attribute
@@ -1031,7 +1014,6 @@ function deleteDeviceByID(deviceid, callback) {
   }
 }
 
-
 function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
 
   asset.getDevicesFromAsset(assetid, function(ret, data) {
@@ -1273,7 +1255,6 @@ function getDeviceByAssetID(assetid, callback) {
   }
 }
 
-
 //get list of devices by AssetID
 function getDeviceByAssetOld(req, res) {
   var assetid = req.swagger.params.AssetID.value;
@@ -1419,8 +1400,6 @@ function getSingleDeviceInternal(index, devices, devicesToDelete, deleteIndex, d
   }
 }
 
-
-
 //get list of devices by UserID
 function getDeviceByUser(req, res) {
   var userid = req.swagger.params.UserID.value;
@@ -1525,7 +1504,6 @@ function deleteGarbageDevicesInUser(userid, devicesToDelete, callback) {
   }
 }
 
-
 function getDevicesByName(deviceName, callback) {
   params = {
     TableName : shareUtil.tables.device,
@@ -1613,8 +1591,24 @@ function getDeviceAttributes(req, res) {
   }
 }
 
-
-
+function getDeviceIdBySerialNumber(serialNumber, callback) {
+  var params = {
+    TableName : shareUtil.tables.device,
+    IndexName : "SerialNumber-index",
+    KeyConditionExpression : "SerialNumber = :v1",
+    ExpressionAttributeValues : {':v1' : serialNumber},
+    ProjectionExpression : "DeviceID"
+  };
+  shareUtil.awsclient.query(params, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Error: " + JSON.stringify(data, null, 2);
+      callback(false, msg);
+    } else {
+      callback(true, data.Items[0].DeviceID);
+    }
+  }
+}
 
 function IsDeviceSerialNumberExist(serialNumber, callback) {
 
@@ -1643,8 +1637,6 @@ function IsDeviceSerialNumberExist(serialNumber, callback) {
        }
    }
 }
-
-
 
 function IsDeviceExist(deviceID, callback) {
 
@@ -1676,7 +1668,6 @@ function IsDeviceExist(deviceID, callback) {
     }
   }
 }
-
 
 function IsUserExist(userID, callback) {
 
