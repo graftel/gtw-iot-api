@@ -20,9 +20,6 @@ var tables = {
     param: "Hx.Parameters"
 };
 
-//var asset = require('./asset.js');
-
-
 module.exports = {
   tables: tables,
   constants: {
@@ -40,43 +37,38 @@ module.exports = {
   SendNotFound: SendNotFound
 };
 
-
-function SendInvalidInput(res, msg = INVALID_INPUT)
-{
+function SendInvalidInput(res, msg = INVALID_INPUT) {
   var errmsg = {
     message: msg
   };
-  console.log(errmsg);
+  //console.log(errmsg);
   res.status(400).send(errmsg);
 }
 
-function SendNotFound(res, msg = NOT_EXIST)
-{
+function SendNotFound(res, msg = NOT_EXIST) {
   var errmsg = {
     message: msg
   };
-  console.log(errmsg);
+  //console.log(errmsg);
   res.status(404).send(errmsg);
 }
 
-function SendSuccess(res, msg = SUCCESS_MSG)
-{
+function SendSuccess(res, msg = SUCCESS_MSG) {
   var errmsg = {
     message: msg
   };
-  console.log(errmsg);
+  //console.log(errmsg);
   res.status(200).send(errmsg);
 }
-function SendInternalErr(res, msg = INTERNAL_ERR)
-{
+
+function SendInternalErr(res, msg = INTERNAL_ERR) {
   var errmsg = {
     message: msg
   };
-  console.log(errmsg);
+  //console.log(errmsg);
   res.status(500).send(errmsg);
 }
 
-function SendSuccessWithData(res, data_out)
-{
+function SendSuccessWithData(res, data_out) {
   res.status(200).send(data_out);
 }

@@ -49,16 +49,16 @@ function getDevicesFromUser(userid, callback) {
     callback(false, msg);
     } else
     {
-    //  console.log(JSON.stringify(usersParams, null ,2));
-      if (typeof data.Items[0] == "undefined" || data.Items[0].Devices.length == 0 )
+      console.log(JSON.stringify(data, null ,2));
+      if (typeof data.Items[0].length == "undefined" )//|| data.Items[0].length == 0 )
       {
         var msg = "UserID does not exist or User does not contain any Device";
-        callback(false, msg);
+        callback(true, data.Items[0]);
       }
       else
       {
-        console.log("datalength" +  data.Items[0].Devices.length);
-        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        //console.log("datalength" +  data.Items[0].Devices.length);
+        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }
@@ -67,22 +67,22 @@ function getDevicesFromUser(userid, callback) {
 
 function createUser(req, res) {
   var userobj = req.body;
-  console.log(userobj);
+  //console.log(userobj);
   if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
-    console.log("is valid = false0");
+    //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res);
   }
   else {
     if(!userobj.EmailAddress && !userobj.Password)
     {
-      console.log("is valid = false1");
+      //console.log("is valid = false1");
        shareUtil.SendInvalidInput(res);
     }
     else {
 
       IsEmailExist(userobj.EmailAddress, function(ret1,data){
         if (ret1) { // exists
-            console.log("exists");
+            //console.log("exists");
             shareUtil.SendInvalidInput(res, 'User already exists');
         }
         else {
@@ -152,7 +152,7 @@ function resetUser(req, res) {
                      console.error(msg);
                      shareUtil.SendInternalErr(res,'Internal Err');
                  } else {
-                   console.log("user reset!");
+                   //console.log("user reset!");
                    var resetinfo = {
                      VerificationCode: expressvalues[":v1"],
                      UserID: data.Items[0].UserID
@@ -164,14 +164,14 @@ function resetUser(req, res) {
 
           }
           else {
-            console.log("user not exist");
+            //console.log("user not exist");
             shareUtil.SendInvalidInput(res, 'User not exists');
           }
 
         });
   }
   else {
-    console.log("is valid = false1");
+    //console.log("is valid = false1");
      shareUtil.SendInvalidInput(res);
   }
 
@@ -181,15 +181,15 @@ function resetUser(req, res) {
 
 function updateUser(req, res) {
   var userobj = req.body;
-  console.log(userobj);
+  //console.log(userobj);
   if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
-    console.log("is valid = false0");
+    //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res);
   }
   else {
     if(!userobj.EmailAddress)
     {
-      console.log("is valid = false1");
+      //console.log("is valid = false1");
        shareUtil.SendInvalidInput(res);
     }
     else {
@@ -223,7 +223,7 @@ function updateUser(req, res) {
               UpdateExpression : updateItems,
               ExpressionAttributeValues : expressvalues
             };
-          console.log(updateParams);
+          //console.log(updateParams);
           shareUtil.awsclient.update(updateParams, function (err, data) {
                if (err) {
                    var msg = "Error:" +  JSON.stringify(err, null, 2);
@@ -236,13 +236,13 @@ function updateUser(req, res) {
                  var msg = {
                    message: "Success"
                  };
-                 console.log("user updated!");
+                 //console.log("user updated!");
                  res.status(200).send(msg);
                }
            });
         }
         else {
-          console.log("exists");
+          //console.log("exists");
           shareUtil.SendInvalidInput(res, 'User Not exists');
         }
 
@@ -253,7 +253,6 @@ function updateUser(req, res) {
 
   // this sends back a JSON response which is a single string
 }
-
 
 function updateUserAsset(userID, assetID, callback) {
   if(!userID)
@@ -288,7 +287,6 @@ function updateUserAsset(userID, assetID, callback) {
   }
 }
 
-
 function getSettings(req, res) {
   var userid = req.swagger.params.userID.value;
 
@@ -303,14 +301,14 @@ function getSettings(req, res) {
           KeyConditionExpression : "UserID = :v1",
           ExpressionAttributeValues : {':v1' : userid.toString()}
         };
-        console.log(params)
+        //console.log(params)
         shareUtil.awsclient.query(params, function(err, data) {
         if (err) {
           var msg = "Error:" + JSON.stringify(err, null, 2);
           console.error(msg);
           shareUtil.SendInternalErr(res,msg);
         }else{
-          console.log(data);
+          //console.log(data);
           if (data.Count == 1) {
             if (typeof data.Items[0].Settings.ParameterList == "undefined")
             {
@@ -341,7 +339,7 @@ function singleDeleteUser(userid, callback){
         UserID : userid
       }
   };
-  console.log(params)
+  //console.log(params)
   shareUtil.awsclient.delete(params, function(err, data) {
     callback(err,data);
   });
@@ -373,9 +371,9 @@ function deleteUser(req, res) {
 
 function updateSettings(req, res) {
   var settingobj = req.body;
-  console.log(settingobj);
+  //console.log(settingobj);
   if(settingobj.constructor === Object && Object.keys(settingobj).length === 0) {
-    console.log("is valid = false0");
+    //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
@@ -407,7 +405,7 @@ function updateSettings(req, res) {
         UpdateExpression : updateItems,
         ExpressionAttributeValues : expressvalues
       };
-    console.log(updateParams);
+    //console.log(updateParams);
     shareUtil.awsclient.update(updateParams, function (err, data) {
          if (err) {
              var msg = "Error:" +  JSON.stringify(err, null, 2);
@@ -420,12 +418,13 @@ function updateSettings(req, res) {
            var msg = {
              message: "Success"
            };
-           console.log("user setting updated!");
+           //console.log("user setting updated!");
            res.status(200).send(msg);
          }
      });
   }
 }
+
 function updatePassword(req, res){
   var emailid = req.swagger.params.EmailAddress.value;
   var password = req.swagger.params.Password.value;
@@ -453,7 +452,7 @@ function updatePassword(req, res){
                  console.error(msg);
                  shareUtil.SendInternalErr(res,'Internal Err');
              } else {
-               console.log("user password updated!");
+               //console.log("user password updated!");
                shareUtil.SendSuccess(res);
              }
          });
@@ -534,10 +533,10 @@ function activate(req, res) {
 
                   activateUser(userid, function(err){
                     if (err){
-                        console.log("cannot activate user");
+                        //console.log("cannot activate user");
                     }
                     else{
-                      console.log("activate user succeed");
+                      //console.log("activate user succeed");
                       shareUtil.SendSuccess(res, 'Activation Succeed');
                     }
                   });
@@ -599,15 +598,15 @@ function authenticate(apikey, callback) {
 
 function logIn(req, res){
   var userobj = req.body;
-  console.log(userobj);
+  //console.log(userobj);
   if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
-    console.log("is valid = false0");
+    //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
     if(!userobj.EmailAddress && !userobj.Password)
     {
-      console.log("is valid = false1");
+      //console.log("is valid = false1");
        shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
     }
     else {
@@ -653,7 +652,7 @@ function activateUser(userid, callback){
       UpdateExpression : "set Active=:v0",
       ExpressionAttributeValues : {":v0": 1}
     };
-  console.log(updateParams);
+  //console.log(updateParams);
   shareUtil.awsclient.update(updateParams, function (err, data) {
       callback(err);
    });
@@ -704,14 +703,14 @@ function getUserbyApiKeyQuery(apiKey, callback) {
     ExpressionAttributeValues : { ':v1' : apiKey},
     ProjectionExpression : "UserID, Devices"
   }
-  //console.log(params);
+  ////console.log(params);
   shareUtil.awsclient.query(params, onQuery);
   function onQuery(err, data) {
     if (err){
       var msg = JSON.stringify(err, null, 2);
       callback(false, msg);
     } else {
-      //console.log("data = " + JSON.stringify(data, null, 2));
+      ////console.log("data = " + JSON.stringify(data, null, 2));
       if (data.Count == 0) {
         var msg = "No user associated with this ApiKey";
         callback(false, msg);

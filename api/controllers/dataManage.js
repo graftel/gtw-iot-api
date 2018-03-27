@@ -91,18 +91,18 @@ function batchAddData(itemsToAddArray, callback) {
       "Hx.Data" : itemsToAddArray
     }
   }
-  //console.log("dataParams = " + JSON.stringify(dataParams, null, 2));
+  ////console.log("dataParams = " + JSON.stringify(dataParams, null, 2));
   shareUtil.awsclient.batchWrite(dataParams, onPut);
   function onPut(err, data) {
     if (err)
     {
-      //console.log(JSON.stringify(dataParams, null, 2));
+      ////console.log(JSON.stringify(dataParams, null, 2));
       var msg = "Error:" +  JSON.stringify(err, null, 2);
       //console.error(msg);
       callback(false,msg);
     } else
     {
-      console.log("write items succeeded !");
+      //console.log("write items succeeded !");
       callback(true, null);
     }
   }
@@ -140,7 +140,7 @@ function addDataBySerialNumber(req, res) {
   if (Data.Data.length != 0){
     deviceManage.getDeviceIdBySerialNumber(serialNumber, function(ret, data) {
       var deviceid = data;
-      //console.log("deviceid = " + JSON.stringify(deviceid, null, 2));
+      ////console.log("deviceid = " + JSON.stringify(deviceid, null, 2));
       addDataByDeviceIDInternal(deviceid, Data, timestamp, function(ret, data) {
         if (ret) {
           shareUtil.SendSuccess(res);
@@ -213,7 +213,7 @@ function convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, index, callba
 function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
   if (!timestamp) {
     timestamp = Math.floor((new Date).getTime()/1000);
-    console.log("timestamp = " + timestamp);
+    //console.log("timestamp = " + timestamp);
   }
 
   if(deviceid){
@@ -221,12 +221,12 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
       if (ret1) {
         var variableidList = data1.Variables;
         var getItems = [];
-        //console.log("variableidList = " + variableidList);
+        ////console.log("variableidList = " + variableidList);
         if(variableidList){
           batchGetItem(variableidList, getItems, function(ret2, data2){
             if(ret2){
               var varIDtoNameMap = data2.Responses["Hx.Variable"];
-              //console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
+              ////console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
               var dataObj = {};
               convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
                 if (ret3) {
@@ -236,11 +236,11 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
                       var valueToVarIDMap = [];
                       mapValueToVarID(data3, data7, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
                         if (ret4) {
-                          //console.log("data4 = " + JSON.stringify(data4, null, 2));
+                          ////console.log("data4 = " + JSON.stringify(data4, null, 2));
                           var itemsToAddArray = [];
                           fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
                             if (ret5) {
-                              //console.log("data5 = " + JSON.stringify(data5, null, 2));
+                              ////console.log("data5 = " + JSON.stringify(data5, null, 2));
                               batchAddData(data5, function(ret6, data6) {
                                 if (ret6) {
                                   callback(true);
@@ -271,7 +271,7 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
         } else {
           // Case whre there is no Variable inside the Device
           var varIDtoNameMap = [];
-          //console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
+          ////console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
           var dataObj = {};
           convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
             if (ret3) {
@@ -281,11 +281,11 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
                   var valueToVarIDMap = [];
                   mapValueToVarID(data3, data7, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
                     if (ret4) {
-                      //console.log("data4 = " + JSON.stringify(data4, null, 2));
+                      ////console.log("data4 = " + JSON.stringify(data4, null, 2));
                       var itemsToAddArray = [];
                       fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
                         if (ret5) {
-                          //console.log("data5 = " + JSON.stringify(data5, null, 2));
+                          ////console.log("data5 = " + JSON.stringify(data5, null, 2));
                           batchAddData(data5, function(ret6, data6) {
                             if (ret6) {
                               callback(true);
@@ -342,8 +342,8 @@ function addDataByDeviceID(req, res) {
 }
 
 function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index, deviceid, callback) {
-  //  console.log("varNameToValueMap = " + JSON.stringify(varNameToValueMap, null, 2));
-  //  console.log(" length = " + Object.keys(varNameToValueMap).length);
+  //  //console.log("varNameToValueMap = " + JSON.stringify(varNameToValueMap, null, 2));
+  //  //console.log(" length = " + Object.keys(varNameToValueMap).length);
   if (index < Object.keys(varNameToValueMap).length) {
     var varName = Object.keys(varNameToValueMap)[index];
     var varValue = varNameToValueMap[varName];
@@ -351,7 +351,7 @@ function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, ind
     var indexOfName = Object.values(varIDtoNameMap).indexOf(varName);
     if (indexOfName > -1) {
       item.VariableID = Object.keys(varIDtoNameMap)[indexOfName];
-      console.log(item.VariableID);
+      //console.log(item.VariableID);
       item.Value = varValue;
       valueToVarIDMap.push(item);
       mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index+1, deviceid, callback);
@@ -361,7 +361,7 @@ function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, ind
       var variableID = uuidv1();
       createNewVariableFromName(varName, variableID, deviceid, function(ret, data){
         item.VariableID = variableID;
-        console.log(item.VariableID);
+        //console.log(item.VariableID);
         item.Value = varValue;
         valueToVarIDMap.push(item);
         mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index+1, deviceid, callback);
@@ -369,7 +369,7 @@ function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, ind
     }
   } else {
     callback(true, valueToVarIDMap);
-    //console.log("valueToVarIDMap = " + JSON.stringify(valueToVarIDMap));
+    ////console.log("valueToVarIDMap = " + JSON.stringify(valueToVarIDMap));
   }
 }
 
@@ -392,7 +392,7 @@ function createNewVariableFromName(varName, varID, deviceid, callback) {
         updateVariableIDInDevice(varID, deviceid, function(ret1, data1){
         if (ret1)
         {
-          console.log("var " + varID + " created !");
+          //console.log("var " + varID + " created !");
           callback(true, null);
         } else
         {
@@ -422,14 +422,13 @@ function convertDataArrToObj(dataArray, dataObj, index, callback) {
     var key = Object.keys(dataArray[index]);
     var value2 = Object.values(dataArray[index]);
     dataObj[key] = value2[0];
-    //console.log("dataSorted = " + JSON.stringify(dataObj, null, 2));
+    ////console.log("dataSorted = " + JSON.stringify(dataObj, null, 2));
     convertDataArrToObj(dataArray, dataObj, index + 1, callback);
   } else {
     callback(true, dataObj);
-  //  console.log(" dataObj = " +  JSON.stringify(dataObj, null, 2));
+  //  //console.log(" dataObj = " +  JSON.stringify(dataObj, null, 2));
   }
 }
-
 
 function batchGetItem(variableidList, getItems, callback){
   fillBatchGetItem(variableidList, getItems, 0, function(ret, data) {
@@ -463,11 +462,11 @@ function fillBatchGetItem(variableidList, getItems, index, callback) {
       "VariableID" : variableidList[index]
     }
     getItems.push(getItem);
-    //console.log("getItem = " + JSON.stringify(getItem, null, 2));
+    ////console.log("getItem = " + JSON.stringify(getItem, null, 2));
     fillBatchGetItem(variableidList, getItems, index+1, callback);
   } else {
     callback(true, getItems);
-  //  console.log("getItems = " + JSON.stringify(getItems, null, 2));
+  //  //console.log("getItems = " + JSON.stringify(getItems, null, 2));
   }
 }
 
@@ -476,7 +475,7 @@ function addSingleData(deviceid, dataobj, index, callback) {
   if (index < dataobj.Data.length)
   {
     var variableName = dataobj.Data[index].VariableName;
-    //console.log("variableName = " + variableName);
+    ////console.log("variableName = " + variableName);
     var nameParams = {
       TableName: shareUtil.tables.variable,
       FilterExpression : "VariableName = :v1",
@@ -504,7 +503,7 @@ function addSingleData(deviceid, dataobj, index, callback) {
         {
           // varName found so add Value to RawData
           var variableid = data.Items[0].VariableID;
-          //console.log("variableid = " + variableid);
+          ////console.log("variableid = " + variableid);
           var timestamp = dataobj.Timestamp;
           var value = dataobj.Data[index].Value;
 
@@ -516,7 +515,7 @@ function addSingleData(deviceid, dataobj, index, callback) {
               Value : value
             }
           }
-          //console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
+          ////console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
 
           shareUtil.awsclient.put(dataParams, onPut);
           function onPut(err, data)
@@ -545,7 +544,7 @@ function addSingleData(deviceid, dataobj, index, callback) {
                   console.error(msg);
                 } else
                 {
-                   console.log("device updated!");
+                   //console.log("device updated!");
                    addSingleData(deviceid, dataobj, index+1, callback);
                 }
               });
@@ -560,7 +559,6 @@ function addSingleData(deviceid, dataobj, index, callback) {
     return callback();
   }
 }
-
 
 function createNewVariable(deviceid, dataobj, index, callback) {
 
@@ -594,7 +592,7 @@ function createNewVariable(deviceid, dataobj, index, callback) {
         if (ret1)
         {
           //shareUtil.SendSuccess(res);
-          console.log("timestamp in update = " + timestamp);
+          //console.log("timestamp in update = " + timestamp);
           addRawData(variableid, timestamp, variableValue, function() {
             addSingleData(deviceid, dataobj, index, callback);
           });
@@ -607,7 +605,6 @@ function createNewVariable(deviceid, dataobj, index, callback) {
     }
   }
 }
-
 
 function updateVariableIDInDevice(variableID, deviceID, callback) {
   if(!deviceID)
@@ -643,7 +640,6 @@ function updateVariableIDInDevice(variableID, deviceID, callback) {
   }
 }
 
-
 function addRawData(variableid, timestamp, value, callback) {
 
   var dataParams = {
@@ -654,8 +650,8 @@ function addRawData(variableid, timestamp, value, callback) {
       Value : value
     }
   }
-  //console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
-  //console.log("timestamp = " + timestamp);
+  ////console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
+  ////console.log("timestamp = " + timestamp);
 
   shareUtil.awsclient.put(dataParams, onPut);
   function onPut(err, data)
@@ -663,7 +659,7 @@ function addRawData(variableid, timestamp, value, callback) {
     if (err)
     {
       var msg = "Error:" + JSON.stringify(err, null, 2);
-      console.log(msg);
+      //console.log(msg);
       //shareUtil.SendInternalErr(res, msg);
     } else
     {
@@ -684,14 +680,14 @@ function getSingleDataByVariableID(req, res) {
      ExpressionAttributeValues : {':v1' : variableID.toString(),
                                   ':v2' : dataTimeStamp}
    };
-   //console.log(params)
+   ////console.log(params)
    shareUtil.awsclient.query(params, function(err, data) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
      shareUtil.SendInternalErr(res,msg);
    }else{
-     //console.log(data);
+     ////console.log(data);
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
@@ -700,7 +696,7 @@ function getSingleDataByVariableID(req, res) {
      else if (data.Count == 1)
      {
         var out_data = {'Value' : data.Items[0]["Value"]};
-        //console.log(out_data);
+        ////console.log(out_data);
         shareUtil.SendSuccessWithData(res, out_data);
      }
      else {
@@ -725,7 +721,7 @@ function getSingleCalculatedData(req, res) {
     ExpressionAttributeValues : {':v1' : assetID.toString(),
                                 ':v2' : dataTimeStamp}
   };
-  //console.log(params)
+  ////console.log(params)
   docClient.query(params, function(err, data) {
   if (err)
   {
@@ -734,7 +730,7 @@ function getSingleCalculatedData(req, res) {
     shareUtil.SendInternalErr(res,msg);
   } else
   {
-    console.log(data);
+    //console.log(data);
     if (data.Count == 0)
     {
       var msg = "Error: Cannot find data"
@@ -766,14 +762,14 @@ function getMultipleDataByVariableID(req, res) {
                                   ':v2' : dataTimeStampFrom,
                                   ':v3' : dataTimeStampTo}
    };
-   console.log(params)
+   //console.log(params)
    shareUtil.awsclient.query(params, function(err, data) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
      console.error(msg);
      shareUtil.SendInternalErr(res,msg);
    }else{
-     //console.log(data);
+     ////console.log(data);
      if (data.Count == 0)
      {
       var msg = "Error: Cannot find data"
@@ -786,7 +782,6 @@ function getMultipleDataByVariableID(req, res) {
    }
  });
 }
-
 
 function getMultipleCalculatedData(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
@@ -807,7 +802,7 @@ function getMultipleCalculatedData(req, res) {
      console.error(msg);
      shareUtil.SendInternalErr(res,msg);
    }else{
-     //console.log(data);
+     ////console.log(data);
      if (data.Count == 0)
      {
        var msg = "Error: Cannot find data"
@@ -838,7 +833,7 @@ function getMultipleCalculatedDataWithParameter(req, res) {
                                   ':v3' : dataTimeStampTo
                                 }
    };
-   //console.log(params);
+   ////console.log(params);
    docClient.query(params, function(err, data) {
    if (err) {
      var msg = "Error:" + JSON.stringify(err, null, 2);
@@ -851,7 +846,7 @@ function getMultipleCalculatedDataWithParameter(req, res) {
         shareUtil.SendInvalidInput(res,NOT_EXIST);
      }
      else {
-        //console.log(data);
+        ////console.log(data);
         delete data["ScannedCount"];
         var out_data = {};
         out_data['values'] = [];

@@ -11,9 +11,11 @@
     "@sendgrid/mail": "^6.2.1",
     "aws-sdk": "^2.179.0",
     "express": "^4.12.3",
+    "npm": "^5.8.0",
     "os": "^0.1.1",
     "swagger-express-mw": "^0.1.0",
     "swagger-parser": "^4.0.1",
+    "swagger-stats": "^0.95.2",
     "uuid": "^3.1.0"
   },
   "devDependencies": {

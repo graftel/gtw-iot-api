@@ -3,7 +3,14 @@
 var SwaggerExpress = require('swagger-express-mw');
 var app = require('express')();
 var userManage = require('./api/controllers/userManage.js')
+
+//var express = require('express');
+//var app = module.exports = express();
+
 module.exports = app; // for testing
+
+var swStats = require('swagger-stats');
+app.use(swStats.getMiddleware({}));
 
 var config = {
   appRoot: __dirname, // required config
@@ -40,6 +47,6 @@ SwaggerExpress.create(config, function(err, swaggerExpress) {
   app.listen(port);
 
   if (swaggerExpress.runner.swagger.paths['/hello']) {
-    console.log('try this:\ncurl http://127.0.0.1:' + port + '/hello?name=Scott');
+    //console.log('try this:\ncurl http://127.0.0.1:' + port + '/hello?name=Scott');
   }
 });

@@ -37,13 +37,6 @@ module.exports = {
   getDevicesFromAsset: getDevicesFromAsset
 };
 
-/*
-  Functions in a127 controllers used for operations should take two parameters:
-
-  Param 1: a handle to the request object
-  Param 2: a handle to the response object
- */
-
 function getAssetByUser(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var userid = req.swagger.params.userID.value;
@@ -102,7 +95,6 @@ function getAssetByUser(req, res) {
    }
 }
 
-
 function deleteGarbageAssets(userid, assetsToDelete, callback) {
 
   var updateExpr = "remove ";
@@ -111,7 +103,7 @@ function deleteGarbageAssets(userid, assetsToDelete, callback) {
     updateExpr = updateExpr + "Assets[" + assetsToDelete[k] + "], ";
   }
 
-  console.log("updateExpr = " + updateExpr);
+  //console.log("updateExpr = " + updateExpr);
   var updateAsset = {
     TableName : shareUtil.tables.users,
     Key : {UserID : userid},
@@ -127,13 +119,11 @@ function deleteGarbageAssets(userid, assetsToDelete, callback) {
       var errmsg = { message: msg };
     } else
     {
-      console.log("assets deleted from User list of Assets!");
+      //console.log("assets deleted from User list of Assets!");
       callback();
     }
   }
 }
-
-
 
 function getSingleAssetInternal(index, assets, assetsToDelete, deleteIndex, assetout, callback) {
     if (index < assets.length){
@@ -165,7 +155,6 @@ function getSingleAssetInternal(index, assets, assetsToDelete, deleteIndex, asse
       callback(assetout, assetsToDelete);
     }
 }
-
 
 function getAssetAttributes(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
@@ -199,14 +188,14 @@ function getAssetAttributes(req, res) {
 function createAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
-  console.log(assetobj);
+  //console.log(assetobj);
   if(assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
     if(!assetobj.DisplayName && !assetobj.UserID)
     {
-      console.log("Error: no display name or userID given");
+      //console.log("Error: no display name or userID given");
       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
     }
     else {
@@ -337,7 +326,7 @@ function updateAsset(req, res) {
                   UpdateExpression : updateItems,
                   ExpressionAttributeValues : expressvalues
               };
-            console.log(updateParams);
+            //console.log(updateParams);
             shareUtil.awsclient.update(updateParams, function (err, data) {
       				if (err)
               {
@@ -352,7 +341,7 @@ function updateAsset(req, res) {
               var msg = {
                 message: "Success"
                 };
-              console.log("asset updated!");
+              //console.log("asset updated!");
               res.status(200).send(msg);
       				}
       			});
@@ -365,12 +354,11 @@ function updateAsset(req, res) {
       var errmsg = {
         message: "Invalid Input"
       };
-      console.log(errmsg);
+      //console.log(errmsg);
       res.status(400).send(errmsg);
     }
   }
 }
-
 
 function deleteDeviceFromAsset(req, res) {
 
@@ -407,7 +395,7 @@ function deleteDeviceFromAsset(req, res) {
         var index = 0;
         while (index < devices.length)
         {
-          console.log("devices.Items[0]: " + devices[index]);
+          //console.log("devices.Items[0]: " + devices[index]);
           if (devices[index] == deviceid)
           {
             deviceIndex = index;
@@ -420,7 +408,7 @@ function deleteDeviceFromAsset(req, res) {
       }
       if (index > 0)
       {  // to make sure the update is made after the deviceIndex is found
-        console.log("device.index = " + deviceIndex);
+        //console.log("device.index = " + deviceIndex);
         var updateExpr = "remove Devices[" + deviceIndex + "]";
         var updateAsset = {
           TableName : shareUtil.tables.assets,
@@ -440,7 +428,7 @@ function deleteDeviceFromAsset(req, res) {
           } else
           {
             var msg = { message: "Success" };
-            console.log("device deleted from Asset!");
+            //console.log("device deleted from Asset!");
             res.status(200).send(msg);
           }
         }
@@ -448,9 +436,6 @@ function deleteDeviceFromAsset(req, res) {
     }
   }
 }
-
-
-
 
 function getDevicesFromAsset(assetid, callback){
 
@@ -469,7 +454,7 @@ function getDevicesFromAsset(assetid, callback){
     callback(false, msg);
   } else
     {
-      //console.log(JSON.stringify(assetsParams, null ,2));
+      ////console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0)
       {
         var msg = "AssetID does not exist or Asset does not contain any Device";
@@ -477,15 +462,12 @@ function getDevicesFromAsset(assetid, callback){
       }
       else
       {
-        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        ////console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }
   }
 }
-
-
-
 
 function deleteVariableFromAsset(req, res) {
 
@@ -509,7 +491,7 @@ function deleteVariableFromAsset(req, res) {
     shareUtil.SendInternalErr(res, msg);
     } else
     {
-      console.log(JSON.stringify(assetsParams, null ,2));
+      //console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0)
       {
         var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
@@ -531,7 +513,7 @@ function deleteVariableFromAsset(req, res) {
         {
           while (index < variables.length)
           {
-            console.log("variables.Items[0]: " + variables[index]);
+            //console.log("variables.Items[0]: " + variables[index]);
             if (variables[index] == variableid)
             {
               varIndex = index;
@@ -545,7 +527,7 @@ function deleteVariableFromAsset(req, res) {
       }
       if (index > 0)
       {  // to make sure the update is made after the deviceIndex is found
-        console.log("var.index = " + varIndex);
+        //console.log("var.index = " + varIndex);
         var updateExpr = "remove Variables[" + varIndex + "]";
         var updateAsset = {
           TableName : shareUtil.tables.assets,
@@ -564,7 +546,7 @@ function deleteVariableFromAsset(req, res) {
           } else
           {
             var msg = { message: "Success" };
-            console.log("Variable deleted from Asset!");
+            //console.log("Variable deleted from Asset!");
             res.status(200).send(msg);
           }
         }
@@ -572,10 +554,6 @@ function deleteVariableFromAsset(req, res) {
     }
   }
 }
-
-
-
-
 
 function deleteAsset(req, res){
 
@@ -629,7 +607,6 @@ function deleteAsset(req, res){
   }
 }
 
-
 function deleteAssetByID(assetid, callback){
 
   var deleteParams = {
@@ -649,7 +626,6 @@ function deleteAssetByID(assetid, callback){
   }
 }
 
-
 function removeAssetFromUser(userid, assetIndex, callback) {
 
   var updateExpr = "remove Assets[" + assetIndex + "]";
@@ -663,17 +639,15 @@ function removeAssetFromUser(userid, assetIndex, callback) {
   function onUpdate (err, data) {
     if (err)
     {
-      console.log("updateUser failed")
+      //console.log("updateUser failed")
       var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       callback(false, msg);
     } else {
-      console.log("user updated");
+      //console.log("user updated");
       callback(true, null);
     }
   }
 }
-
-
 
 function IsAssetExist(assetID, callback) {
 
@@ -716,7 +690,7 @@ function updateSingleAssetKey(asset, assetid, key,  callback){
       }
     };
 
-    console.log(updateParams);
+    //console.log(updateParams);
     shareUtil.awsclient.update(updateParams, function (err, data) {
     callback(err,data);
   });
