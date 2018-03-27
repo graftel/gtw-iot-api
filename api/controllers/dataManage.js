@@ -2,6 +2,7 @@
 var shareUtil = require('./shareUtil.js');
 var variableManage = require('./variableManage.js');
 var deviceManage = require('./deviceManage.js');
+var userManage = require('./userManage.js');
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -18,7 +19,8 @@ module.exports = {
   getSingleDataByVariableID: getSingleDataByVariableID,
   getMultipleDataByVariableID: getMultipleDataByVariableID,
   addDataByDeviceID: addDataByDeviceID,
-  addDataByVariableID: addDataByVariableID
+  addDataByVariableID: addDataByVariableID,
+  addDataByDeviceName: addDataByDeviceName
 };
 
 
@@ -130,6 +132,59 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
   });
 }
 
+function  addDataByDeviceName(req, res) {
+  var deviceName = req.swagger.params.DeviceName.value;
+  var apiKey = req.headers["x-api-key"];
+  var Data = req.body.Data;
+  var timestamp = req.body.Timestamp;
+
+  if(Data.Data.length != 0) {
+    userManage.getUserbyApiKeyQuery(apiKey, function (ret, data) {
+      if (ret) {
+        var devices = data.Items[0].Devices;
+        deviceManage.getDevicesDisplayName(devices, function(ret1, data1) {
+          if (ret1) {
+            var devIDtoNameMap = data1.Responses[shareUtil.tables.device];
+            var devObj = {};
+            convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, 0, function(ret2, data2) {
+              if (ret2) {
+                var deviceid = data2[deviceName];
+                addDataByDeviceIDInternal(deviceid, Data, timestamp, function(ret, data) {
+                  if (ret) {
+                    shareUtil.SendSuccess(res);
+                  } else {
+                    var msg = "Error: " + JSON.stringify(data, null, 2);
+                    shareUtil.SendInternalErr(res, msg);
+                  }
+                });
+              } else {
+                shareUtil.SendInvalidInput(res);
+              }
+            });
+          } else {
+            shareUtil.SendInvalidInput(res, data);
+          }
+        });
+      } else {
+        shareUtil.SendInvalidInput(res, data);
+      }
+    });
+  } else {
+    var msg = "No data provided";
+    shareUtil.SendInvalidInput(res, msg);
+  }
+}
+
+function convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, index, callback) {
+  if (index < devIDtoNameMap.length) {
+    devid = devIDtoNameMap[index].DeviceID;
+    devName = devIDtoNameMap[index].DisplayName;
+    devObj[devName] = devid
+    convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, index + 1, callback);
+  } else {
+    callback(true, devObj);
+  }
+}
 
 function addDataByDeviceIDOld(req, res) {
 
@@ -164,11 +219,7 @@ function addDataByDeviceIDOld(req, res) {
   }
 }
 
-function addDataByDeviceID(req, res) {
-  var deviceid = req.swagger.params.DeviceID.value;
-  var dataobj = req.body;
-  var data = dataobj.Data;
-  var timestamp = dataobj.Timestamp;
+function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
   if (!timestamp) {
     timestamp = Math.floor((new Date).getTime()/1000);
     console.log("timestamp = " + timestamp);
@@ -200,41 +251,61 @@ function addDataByDeviceID(req, res) {
                             console.log("data5 = " + JSON.stringify(data5, null, 2));
                             batchAddData(data5, function(ret6, data6) {
                               if (ret6) {
-                                shareUtil.SendSuccess(res);
+                                callback(true);
                               } else {
-                                shareUtil.SendInternalErr(res, data6);
+                                callback(false, data6);
                               }
                             });
                           } else {
-                            shareUtil.SendInternalErr(res);
+                            callback(false);
                           }
                         });
                       } else {
-                        shareUtil.SendInternalErr(res, data4);
+                        callback(false, data4);
                       }
                     });
                   } else {
-                    shareUtil.SendInternalErr(res);
+                    callback(false);
                   }
                 })
               } else {
-                shareUtil.SendInvalidInput(res);
+                callback(false);
               }
             });
           } else {
-            shareUtil.SendNotFound(res, data2);
+            callback(false, data2);
           }
         });
       } else { // no Variables found in Device
-        shareUtil.SendNotFound(res);
+        callback(false);
       }
     });
   } else {
       var msg = "DeviceID missing";
-      shareUtil.SendInvalidInput(res, msg);
+      callback(false, msg);
   }
 }
 
+function addDataByDeviceID(req, res) {
+  var deviceid = req.swagger.params.DeviceID.value;
+  var dataobj = req.body;
+  var data = dataobj.Data;
+  var timestamp = dataobj.Timestamp;
+
+  if(data.Data.length != 0) {
+    addDataByDeviceIDInternal(deviceid, data, timestamp, function(ret, data) {
+      if (ret) {
+        shareUtil.SendSuccess(res);
+      } else {
+        var msg = "Error: " + JSON.stringify(data, null, 2);
+        shareUtil.SendInternalErr(res, msg);
+      }
+    });
+  } else {
+    var msg = "No data provided";
+    shareUtil.SendInvalidInput(res, msg);
+  }
+}
 
 function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index, deviceid, callback) {
   //  console.log("varNameToValueMap = " + JSON.stringify(varNameToValueMap, null, 2));
@@ -302,12 +373,10 @@ function createNewVariableFromName(varName, varID, deviceid, callback) {
 function convertVarIDtoVarNameArrayIntoObj(varIDtoNameMap, varObj, index, callback) {
   if( index < varIDtoNameMap.length) {
     varid = varIDtoNameMap[index].VariableID;
-    //varName = varIDtoNameMap[index].VariableName;
-    varName = Object.values(varIDtoNameMap[index])[1];
+    varName = varIDtoNameMap[index].VariableName;
     varObj[varid] = varName;
     convertVarIDtoVarNameArrayIntoObj(varIDtoNameMap, varObj, index + 1, callback);
   } else {
-    //    console.log("varIDtoNameMapconverted = " + JSON.stringify(varObj, null, 2));
     callback(true, varObj);
   }
 }

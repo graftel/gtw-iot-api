@@ -1025,6 +1025,39 @@ paths:
           description: Error
           schema:
             $ref: "#/definitions/ErrorResponse"
+  /data/addDataByDeviceName:
+    x-swagger-router-controller: dataManage
+    post:
+      tags:
+      - data
+      description:  Add Data by device id and timestamp
+      # used as the method name of the controller
+      operationId: addDataByDeviceName
+      parameters:
+      - name: DeviceName
+        in: query
+        type: string
+      - name: body
+        in: body
+        required: true
+        schema: 
+          properties:
+            Data:
+            # type: object
+              #items: 
+              $ref: '#/definitions/AddDataByVarNameModel'
+            Timestamp:
+              type: integer
+      responses:
+        200:
+          description: Success
+          schema:
+            $ref: "#/definitions/SuccessResponse"
+        # responses may fall through to errors
+        default:
+          description: Error
+          schema:
+            $ref: "#/definitions/ErrorResponse"
   /swagger:
     x-swagger-pipe: swagger_raw
 # complex objects have schema definitions

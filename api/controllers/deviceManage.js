@@ -29,7 +29,9 @@ module.exports = {
   getDeviceByAssetID: getDeviceByAssetID,
   getVariablesFromDevice: getVariablesFromDevice,
   IsDeviceExist: IsDeviceExist,
-  isItemInList: isItemInList
+  isItemInList: isItemInList,
+  getDevicesByName : getDevicesByName,
+  getDevicesDisplayName : getDevicesDisplayName
 };
 
 
@@ -1524,8 +1526,62 @@ function deleteGarbageDevicesInUser(userid, devicesToDelete, callback) {
 }
 
 
+function getDevicesByName(deviceName, callback) {
+  params = {
+    TableName : shareUtil.tables.device,
+    FilterExpression : "DisplayName = :v1",
+    ExpressionAttributeValues : {':v1' : deviceName},
+    ProjectionExpression : "DeviceID"
+  }
+  shareUtil.awsclient.scan(params, onScan);
+  function onScan(err, data) {
+    if (err) {
+      var msg = JSON.stringify(err);
+      callbcak(false, msg);
+    } else {
+      callback(true, data);
+    }
+  }
+}
 
+function getDevicesDisplayName(devices, callback) {
+  var getItems = [];
+  fillBatchGetItemDevices(devices, getItems, 0, function(ret, data) {
+    if (ret) {
+      var deviceParams = {
+        RequestItems : {
+          "Hx.Device" : {
+            Keys : data,
+            ProjectionExpression : "DeviceID, DisplayName"
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(deviceParams, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false);
+    }
+  });
+}
 
+function fillBatchGetItemDevices(deviceidList, getItems, index, callback) {
+  if (index < deviceidList.length) {
+    var getItem = {
+      "DeviceID" : deviceidList[index]
+    }
+    getItems.push(getItem);
+    fillBatchGetItemDevices(deviceidList, getItems, index+1, callback);
+  } else {
+    callback(true, getItems);
+  }
+}
 
 function getDeviceAttributes(req, res) {
 

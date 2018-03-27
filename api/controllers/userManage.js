@@ -27,7 +27,8 @@ module.exports = {
   updatePassword: updatePassword,
   updateUserAsset: updateUserAsset,
   getDevicesFromUser: getDevicesFromUser,
-  getUserbyApiKey: getUserbyApiKey
+  getUserbyApiKey: getUserbyApiKey,
+  getUserbyApiKeyQuery: getUserbyApiKeyQuery
 };
 
 function getDevicesFromUser(userid, callback) {
@@ -685,27 +686,38 @@ function IsEmailExist(email, callback){
 
 function getUserbyApiKey(req, res) {
   var ApiKey = req.swagger.params.ApiKey.value;
-  console.log("fn entered");
+  getUserbyApiKeyQuery(ApiKey, function (ret, data) {
+    if (ret) {
+      var msg = JSON.stringify(data);
+      shareUtil.SendSuccessWithData(res, msg);
+    } else {
+      shareUtil.SendNotFound(res, data);
+    }
+  });
+}
+
+function getUserbyApiKeyQuery(apiKey, callback) {
   params = {
     TableName : shareUtil.tables.users,
     IndexName : "ApiKey-index",
     KeyConditionExpression : "ApiKey = :v1",
-    ExpressionAttributeValues : { ':v1' : ApiKey},
+    ExpressionAttributeValues : { ':v1' : apiKey},
     ProjectionExpression : "UserID, Devices"
   }
-  console.log(params);
+  //console.log(params);
   shareUtil.awsclient.query(params, onQuery);
   function onQuery(err, data) {
     if (err){
       var msg = JSON.stringify(err, null, 2);
-      shareUtil.SendInternalErr(res, msg);
+      callback(false, msg);
     } else {
-      console.log("data = " + JSON.stringify(data, null, 2));
+      //console.log("data = " + JSON.stringify(data, null, 2));
       if (data.Count == 0) {
         var msg = "No user associated with this ApiKey";
-        shareUtil.SendNotFound(res, msg);
+        callback(false, msg);
+      } else {
+        callback(true, data);
       }
-      shareUtil.SendSuccessWithData(res, data);
     }
   }
 }

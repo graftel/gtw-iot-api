@@ -65,7 +65,6 @@ function updateVariableIDInDevice(variableID, deviceID, callback) {
   }
 }
 
-
 function checkVariableInDevice(variableID, deviceID, callback) {
 
   var params = {
@@ -74,34 +73,31 @@ function checkVariableInDevice(variableID, deviceID, callback) {
     ExpressionAttributeValues : {':v1' : deviceID.toString()}
   };
   shareUtil.awsclient.query(params, function(err, data) {
-  if (err) {
-    var msg = "Error:" + JSON.stringify(err, null, 2);
-    callback(false,msg);
-  }else{
-    if (data.Count == 1) {
-      if (typeof data.Items[0].Variables == "undefined")
-      {
-        callback(true,null);
-      }
-      else {
-        if (data.Items[0].Variables.indexOf(variableID) > -1) {
-          var msg = "Variable Already exists in Device";
-          callback(false,msg);
-        }
-        else {
-          console.log("true, null");
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      callback(false,msg);
+    } else {
+      if (data.Count == 1) {
+        if (typeof data.Items[0].Variables == "undefined")
+        {
           callback(true,null);
         }
+        else {
+          if (data.Items[0].Variables.indexOf(variableID) > -1) {
+            var msg = "Variable Already exists in Device";
+            callback(false,msg);
+          } else {
+            console.log("true, null");
+            callback(true,null);
+          }
+        }
       }
-
-    }
-    else {
+      else {
         var msg = "Error: Cannot find data"
         callback(false,msg);
+      }
     }
-
-  }
-});
+  });
 }
 
 function addVariableInternal(variableobj, deviceid, res) {
@@ -169,34 +165,36 @@ function isVariableNameUniqueInDevice(variableName, deviceid, callback){
     if (ret)
     {
       var variables = data.Variables;
-      //console.log("variables = " + variables);
-      //var variableNameList = []
-      getVariableNameList(variables, 0, function(ret1, data1) {
-        if (ret1)
-        {
-          var variableNameList = data1.Responses["Hx.Variable"];
-          //console.log("variableNameList" + JSON.stringify(variableNameList, null, 2));
-          var arrayList = [];
-          convertJSONListToArray(variableNameList, arrayList, 0, function(ret2, data2){
-            if(ret){
-              deviceManage.isItemInList(variableName, data2, function(ret2, data2) { //return true if item IS in the list
-                if (ret2)
-                {
-                  callback(true, null);
-                } else
-                {
-                  var msg = "variableName not unique";
-                  callback(false, msg)
-                }
-              });
-            }
-          });
-        } else
-        {
-          callback(false, data1);
-        }
-      })
-
+      console.log("variables = " + variables);
+      if(variables){
+        getVariableNameList(variables, 0, function(ret1, data1) {
+          if (ret1)
+          {
+            var variableNameList = data1.Responses["Hx.Variable"];
+            //console.log("variableNameList" + JSON.stringify(variableNameList, null, 2));
+            var arrayList = [];
+            convertJSONListToArray(variableNameList, arrayList, 0, function(ret2, data2){
+              if(ret){
+                deviceManage.isItemInList(variableName, data2, function(ret2, data2) { //return true if item IS in the list
+                  if (ret2)
+                  {
+                    callback(true, null);
+                  } else
+                  {
+                    var msg = "variableName not unique";
+                    callback(false, msg)
+                  }
+                });
+              }
+            });
+          } else
+          {
+            callback(false, data1);
+          }
+        });
+      } else {
+        callback(true, null);
+      }
     } else
     {
       callback(false, data);
@@ -257,7 +255,6 @@ function fillParamsArray(variablesArrayID, itemsToGetArray, index, callback){
   }
 }
 
-
 function createVariable(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableobj = req.body;
@@ -293,9 +290,6 @@ function createVariable(req, res) {
     shareUtil.SendNotFound(res, msg);
   }
 }
-
-
-
 
 function updateVariableIDInAsset(variableID, assetID, callback) {
   if(!assetID)
@@ -335,7 +329,6 @@ function updateVariableIDInAsset(variableID, assetID, callback) {
   }
 }
 
-
 function checkVariableInAsset(variableID, assetID, callback) {
 
   var variables = {
@@ -374,7 +367,6 @@ function checkVariableInAsset(variableID, assetID, callback) {
 
 
 }
-
 
 function addVariableInternalToAsset(variableobj, assetid, res) {
   var uuidv1 = require('uuid/v1');
@@ -424,7 +416,6 @@ function addVariableInternalToAsset(variableobj, assetid, res) {
   });
 }
 
-
 function addVariableToAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableobj = req.body;
@@ -449,9 +440,6 @@ function addVariableToAsset(req, res) {
     }
   }
 }
-
-
-
 
 function updateVariable(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
@@ -532,8 +520,6 @@ function updateVariable(req, res) {
   // this sends back a JSON response which is a single string
 }
 
-
-
 function deleteSingleVariable(variableID, callback) {
 
   var deleteParams = {
@@ -561,9 +547,6 @@ function deleteSingleVariable(variableID, callback) {
     }
   }
 }
-
-
-
 
 function findVariableIndexInDevice(deviceID, variableID, callback){
 
@@ -631,8 +614,6 @@ function findVariableIndexInDevice(deviceID, variableID, callback){
   }
 }
 
-
-
 function deleteVarFromDeviceList(variableIndex, deviceID, callback) {
 
   if (typeof variableIndex == "undefined"){
@@ -664,9 +645,6 @@ function deleteVarFromDeviceList(variableIndex, deviceID, callback) {
     }
   }
 }
-
-
-
 
 function findVariableIndexInAsset(assetID, variableID, callback){
 
@@ -731,8 +709,6 @@ function findVariableIndexInAsset(assetID, variableID, callback){
   }
 }
 
-
-
 function deleteVarFromAssetList(variableIndex, assetID, callback) {
 
   if (typeof variableIndex == "undefined"){
@@ -763,8 +739,6 @@ function deleteVarFromAssetList(variableIndex, assetID, callback) {
     }
   }
 }
-
-
 
 // Delete device by deviceID
 // requires also AssetID in argument to delete the device from the table Asset in the Devices list attribute
@@ -833,7 +807,6 @@ function deleteVariable(req, res) {
   });
   // this sends back a JSON response which is a single string
 }
-
 
 function getVariablebyDeviceID(deviceid, callback) {
   var variablesParams = {
@@ -922,8 +895,6 @@ function getVariablebyDevice(req, res) {
   });
 }
 
-
-
 function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, callback) {
 
   var updateExpr = "remove ";
@@ -953,7 +924,6 @@ function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, c
     }
   }
 }
-
 
 function getSingleVariableInternal(index, variables, deviceid, variablesToDelete, deleteIndex, variableout, callback) {
   if (index < variables.length)
@@ -994,7 +964,6 @@ function getSingleVariableInternal(index, variables, deviceid, variablesToDelete
   }
 }
 
-
 function getVariablesFromDeviceArray(devices, index, variablesout, callback) {
 
   if(index < devices.length)
@@ -1018,7 +987,6 @@ function getVariablesFromDeviceArray(devices, index, variablesout, callback) {
     console.log("var[] length = " + variablesout.length);
   }
 }
-
 
 function getVariableByAssetIDOld(req, res) {
   var assetid = req.swagger.params.AssetID.value;
@@ -1128,9 +1096,6 @@ function getVariableByAsset(req, res) {
   });
 }
 
-
-
-
 function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, callback) {
 
   var updateExpr = "remove ";
@@ -1161,9 +1126,6 @@ function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, cal
   }
 }
 
-
-
-
 function getVariableAttributes(req, res) {
 
   var variableid = req.swagger.params.VariableID.value;
@@ -1193,9 +1155,6 @@ function getVariableAttributes(req, res) {
     }
   }
 }
-
-
-
 
 function IsVariableExist(variableID, callback) {
 
