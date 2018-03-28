@@ -156,7 +156,7 @@ function addDataBySerialNumber(req, res) {
   }
 }
 
-function  addDataByDeviceName(req, res) {
+function addDataByDeviceName(req, res) {
   var deviceName = req.swagger.params.DeviceName.value;
   var apiKey = req.headers["x-api-key"];
   var Data = req.body.Data;

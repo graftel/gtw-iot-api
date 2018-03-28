@@ -43,33 +43,36 @@ function removeDeviceFromAsset(req, res){
   var deviceid = deviceobj.DeviceID
 
     asset.getDevicesFromAsset(assetid, function(ret, data) {
-    if (ret)
-    {
-      var deviceIndex = data.Devices.indexOf(deviceid);
-      var updateExpr = "remove Devices[" + deviceIndex + "]";
-
-      var updateAsset = {
-        TableName : shareUtil.tables.assets,
-        Key : {AssetID : assetid},
-        UpdateExpression : updateExpr
-      };
-      shareUtil.awsclient.update(updateAsset, onUpdate);
-      function onUpdate(err, data)
-      {
-        if (err)
-        {
-          var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-          //console.error(msg);
-        //  var errmsg = { message: msg };
-          shareUtil.SendInternalErr(res, msg);
-        } else
-        {
-          //console.log("devices deleted from Asset list of Devices!");
-          shareUtil.SendSuccess(res);
+    if (ret) {
+      if (data.Devices){
+        var deviceIndex = data.Devices.indexOf(deviceid);
+        if (deviceIndex >= 0) {
+          var updateExpr = "remove Devices[" + deviceIndex + "]";
+          var updateAsset = {
+            TableName : shareUtil.tables.assets,
+            Key : {AssetID : assetid},
+            UpdateExpression : updateExpr
+          };
+          shareUtil.awsclient.update(updateAsset, onUpdate);
+          function onUpdate(err, data) {
+            if (err) {
+              var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+              //console.error(msg);
+              shareUtil.SendInternalErr(res, msg);
+            } else {
+              //console.log("devices deleted from Asset list of Devices!");
+              shareUtil.SendSuccess(res);
+            }
+          }
+        } else {
+          var msg = "Device not found in Asset";
+          shareUtil.SendNotFound(res, msg);
         }
+      } else {
+        var msg = "No device found in Asset";
+        shareUtil.SendInvalidInput(res, msg);
       }
-    } else
-    {
+    } else {
       var msg = "Error:" + JSON.stringify(data, null, 2);
       shareUtil.SendInternalErr(res, msg);
     }
@@ -156,34 +159,22 @@ function checkDeviceInUser(deviceID, userID, callback) {
     ExpressionAttributeValues : {':v1' : userID.toString()}
   };
   shareUtil.awsclient.query(params, function(err, data) {
-    if (err)
-    {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       callback(false,msg);
-    } else
-    {
-      if (data.Count == 1)
-      {
-        if (typeof data.Items[0].Devices == "undefined")
-        {
+    } else {
+      if (data.Count == 1) {
+        if (typeof data.Items[0].Devices == "undefined") {
           callback(true,null);
-        }
-        else
-        {
-          if (data.Items[0].Devices.indexOf(deviceID) > -1)
-          {
+        } else {
+          if (data.Items[0].Devices.indexOf(deviceID) > -1) {
             var msg = "Device Already exists in User";
             callback(false,msg);
-          }
-          else
-          {
+          } else {
             callback(true,null);
           }
         }
-      }
-      else
-      {
-        //var msg = "Cannot find data";
+      } else {
         var msg = "UserID not found";
         callback(false,msg);
       }
@@ -216,7 +207,6 @@ function addDeviceInternal(deviceobj, res) {
       if (ret)
       {
         //console.log("displayName unique");
-
         params.Item = Object.assign(params.Item, deviceobj);
         delete params.Item['UserID'];
         delete params.Item['AssetID'];
@@ -328,35 +318,26 @@ function checkDeviceInAsset(deviceID, assetID, callback) {
     ExpressionAttributeValues : {':v1' : assetID.toString()}
   };
   shareUtil.awsclient.query(params, function(err, data) {
-    if (err)
-    {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       callback(false,msg);
-    } else
-    {
+    } else {
       //console.log(JSON.stringify(data, null, 2));
-      if (data.Count == 1)
-      {
+      if (data.Count == 1) {
+        //console.log(JSON.stringify(data, null, 2));
         if (typeof data.Items[0].Devices == "undefined")
         {
+          console.log("no Devices in asset");
           callback(true,null);
-        }
-        else
-        {
-          if (data.Items[0].Devices.indexOf(deviceID) > -1)
-          {
+        } else {
+          if (data.Items[0].Devices.indexOf(deviceID) > -1) {
             var msg = "Device Already exists in Asset";
             callback(false, msg);
-          }
-          else
-          {
+          } else {
             callback(true, null);
           }
         }
-      }
-      else
-      {
-        console.log(JSON.stringify(data, null, 2));
+      } else {
         var msg = "AssetID not found";
         callback(false,msg);
       }
@@ -630,7 +611,7 @@ function isDisplayNameUniqueInUser(displayName, userid, callback){
         getDisplayNameList(devices, 0, displayNameList, function(ret1, displayNameList, data1) {
           if (ret1)
           {
-            //console.log("displayNameList" + JSON.stringify(displayNameList, null, 2));
+            console.log("displayNameList" + JSON.stringify(displayNameList, null, 2));
             isItemInList(displayName, displayNameList, function(ret2, data2) {
               if (ret2)
               {
@@ -700,75 +681,103 @@ function getDisplayNameList(devicesArrayID, index, displayNameList, callback) { 
 }
 
 function updateDevice(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var deviceobj = req.body;
   var isValid = true;
-  //console.log(deviceobj);
-  if(deviceobj.constructor === Object && Object.keys(deviceobj).length === 0) {
+  if (deviceobj.constructor === Object && Object.keys(deviceobj).length === 0) {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
   else {
-    if(!deviceobj.DeviceID)
-    {
+    if (!deviceobj.DeviceID) {
       shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-    }
-    else {
-      // check if asset exists
+    } else {
       IsDeviceExist(deviceobj.DeviceID, function(ret1, data){
-          if (ret1) {
-            var updateItems = "set ";
-            var expressvalues = {};
-
-            var i = 0
-            for (var key in deviceobj)
-            {
-              if (deviceobj.hasOwnProperty(key))
-              {
-                if (key != "DeviceID")
-                {
-                  updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
-                  expressvalues[":v" + i.toString()] = deviceobj[key];
-                  i++;
+        if (ret1) {
+          if (deviceobj.DisplayName) {
+            if (deviceobj.UserID) {
+              checkDeviceInUser(deviceobj.DeviceID, deviceobj.UserID, function(ret2, data2) {
+                if (!ret2) {
+                  console.log("dev in user");
+                  isDisplayNameUniqueInUser(deviceobj.DisplayName, deviceobj.UserID, function(ret3, data3) {
+                    if (ret3) {
+                      updateDeviceInternal(deviceobj, data, function(ret4, data4) {
+                        if (ret4) {
+                          shareUtil.SendSuccess(res);
+                        } else {
+                          shareUtil.SendInvalidInput(res, data4);
+                        }
+                      });
+                    } else {    // Display Name not unique in User
+                      shareUtil.SendInvalidInput(res, data3)
+                    }
+                  });
+                } else {    // device not in user
+                  var msg = "DeviceID not in User"
+                  shareUtil.SendInvalidInput(res, msg);
                 }
-              }
+              });
+            } else {
+              var msg = "UserID required to update DisplayName";
+              shareUtil.SendInvalidInput(res, msg);
             }
-
-            updateItems = updateItems.slice(0, -1);
-
-            var updateParams = {
-                  TableName : shareUtil.tables.device,
-                  Key : {
-                    DeviceID: data.Items[0].DeviceID
-                },
-                UpdateExpression : updateItems,
-                ExpressionAttributeValues : expressvalues
-              };
-            //console.log(updateParams);
-            shareUtil.awsclient.update(updateParams, function (err, data) {
-                 if (err) {
-                     var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-                     console.error(msg);
-                     var errmsg = {
-                       message: msg
-                     };
-                     res.status(500).send(errmsg);
-                 } else {
-                   var msg = {
-                     message: "Success"
-                   };
-                   //console.log("asset updated!");
-                   res.status(200).send(msg);
-                 }
-             });
+          } else {
+            // no displayName to be updated
+            updateDeviceInternal(deviceobj, data, function(ret4, data4) {
+              if (ret4) {
+                shareUtil.SendSuccess(res);
+              } else {
+                shareUtil.SendInvalidInput(res, data4);
+              }
+            });
           }
-          else {
-            //console.log("isvalid=false2");
-            shareUtil.SendInvalidInput(res,shareUtil.NOT_EXIST);
-          }
+        } else {
+          shareUtil.SendInvalidInput(res, data);
+        }
       });
     }
   }
-  // this sends back a JSON response which is a single string
+}
+
+function updateDeviceInternal(deviceobj, data, callback) {
+  if(deviceobj.AssetID) {
+    delete deviceobj['AssetID'];
+  }
+  if(deviceobj.UserID) {
+    delete deviceobj['UserID'];
+  }
+  var updateItems = "set ";
+  var expressvalues = {};
+  if (Object.keys(deviceobj).length > 1) {    // check if there is actually at one attribute provided in the request to update the device
+    var i = 0
+    for (var key in deviceobj) {
+      if (deviceobj.hasOwnProperty(key)) {
+        if (key != "DeviceID") {
+          updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
+          expressvalues[":v" + i.toString()] = deviceobj[key];
+          i++;
+        }
+      }
+    }
+    updateItems = updateItems.slice(0, -1);
+    var updateParams = {
+          TableName : shareUtil.tables.device,
+          Key : {
+            DeviceID: data.Items[0].DeviceID
+        },
+        UpdateExpression : updateItems,
+        ExpressionAttributeValues : expressvalues
+      };
+    shareUtil.awsclient.update(updateParams, function (err, data) {
+      if (err) {
+        var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
+        callback(false, msg);
+      } else {
+        callback(true);
+      }
+    });
+  } else {
+    var msg = "At least 1 other attibute than DeviceID is needed to update the device";
+    callback(false, msg);
+  }
 }
 
 // Delete device by deviceID or by AssetID
@@ -1077,7 +1086,7 @@ function getVariablesFromDevice(deviceid, callback){
       }
       else
       {
-        ////console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+        console.log("data.Items[0] = " + JSON.stringify(data, null, 2));
         callback(true, data.Items[0]);
       }
     }

@@ -50,15 +50,14 @@ function getDevicesFromUser(userid, callback) {
     } else
     {
       console.log(JSON.stringify(data, null ,2));
-      if (typeof data.Items[0].length == "undefined" )//|| data.Items[0].length == 0 )
+      //if (typeof data.Items[0].length == "undefined" )//|| data.Items[0].length == 0 )
+      if (data.Count == 0)
       {
         var msg = "UserID does not exist or User does not contain any Device";
-        callback(true, data.Items[0]);
+        callback(false, data.Items[0]);
       }
       else
       {
-        //console.log("datalength" +  data.Items[0].Devices.length);
-        //console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }

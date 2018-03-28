@@ -856,7 +856,7 @@ paths:
         description: Variable object thats needs to be updated
         required: true
         schema:
-          $ref: '#/definitions/VariableModel'
+          $ref: '#/definitions/UpdateVariableModel'
       responses:
         200:
           description: Success
@@ -1180,6 +1180,25 @@ definitions:
   VariableModel:
     type: object
     properties:
+      VariableID:
+        type: string
+      CurrentValue: 
+        type: string
+      VariableName: 
+        type: string
+      VariableTag:
+        type: string
+      VariableType:
+        type: string
+      VariableUnit:
+        type: string
+      Equation:
+        type: string
+  UpdateVariableModel:
+    type: object
+    properties:
+      DeviceID:
+        type: string
       VariableID:
         type: string
       CurrentValue: 
