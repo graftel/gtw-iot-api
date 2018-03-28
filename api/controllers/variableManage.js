@@ -1,6 +1,7 @@
 var shareUtil = require('./shareUtil.js');
 var asset = require('./asset.js');
 var deviceManage = require('./deviceManage.js');
+
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -218,11 +219,10 @@ function getVariableNameList(variablesArrayID, index, callback) {
       }
       shareUtil.awsclient.batchGet(variablesParam, onGet);
       function onGet(err, data1){
-        if (err){
+        if (err) {
           var msg = "Error:" +  JSON.stringify(err, null, 2);
           callback(false, msg);
-        } else
-        {
+        } else {
           callback(true, data1);
         }
       }
@@ -776,64 +776,33 @@ function getVariablebyDeviceID(deviceid, callback) {
     ProjectionExpression : "Variables"
   };
   shareUtil.awsclient.query(variablesParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
-      //console.log("deviceid = " + deviceid);
+  function onQuery(err, data) {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       shareUtil.SendInternalErr(res, msg);
-    } else
-     {
-      var sendData =
-      {
+    } else {
+      var sendData = {
         Items: [],
         Count: 0
       };
-      if (data.Count == 0)
-      {
+      if (data.Count == 0) {
         var msg = "DeviceID does not exist" ;
         callback(false, msg);
-      } else
-      {
+      } else {
         var variables = data.Items[0].Variables;
-  //      //console.log("variables = " + variables);
-    //    //console.log("data.count = " + data.Count);
-
-
-        if (typeof variables == "undefined")
-        {
+        if (typeof variables == "undefined") {
           var msg = "DeviceID does not contain any variable";
           callback(false, msg);
-        }
-        else
-        {
-          if (variables.length == 0)
-          {
-            //console.log("length  = 0");
+        } else {
+          if (variables.length == 0) {
             var msg = "No Variable found in Device";
             callback(false, msg);
-          }
-          else
-          {
-            //console.log("variables: " + variables);
-            //console.log("variables.length = " + variables.length);
-            var variablesToDelete = [];
-            var deleteIndex = 0;
-            getSingleVariableInternal(0, variables, deviceid, variablesToDelete, deleteIndex, null, function(variablesdata, variablesToDelete){
-              //console.log("variablesToDelete -> " + variablesToDelete);
-              sendData.Items = variablesdata;
-              sendData.Count = variablesdata.length;
-              if (variablesToDelete.length == 0)    // no garbage Variables to delete in Device's list of Variables
-              {
-                callback(true, sendData);
-                //console.log("sendData = " + JSON.stringify(sendData, null, 2));
-              } else
-              {
-                deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, function(sendData) {
-                callback(true, sendData);
-                });
-              }
+          } else {
+            var gottenVar = [];
+            batchGetVariablesAttributes(variables, gottenVar, function(ret, variablesdata) {
+            sendData.Items = variablesdata.Responses[shareUtil.tables.variable];
+            sendData.Count = variablesdata.Responses[shareUtil.tables.variable].length;
+            callback(true, sendData);
             });
           }
         }
@@ -842,14 +811,49 @@ function getVariablebyDeviceID(deviceid, callback) {
   }
 }
 
+function batchGetVariablesAttributes(variableidList, gottenVar, callback) {
+  fillBatchGetItem(variableidList, gottenVar, 0, function(ret, data) {
+    if (ret) {
+      var dataParams = {
+        RequestItems : {
+          "Hx.Variable" : {
+            Keys : data
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(dataParams, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function fillBatchGetItem(variableidList, getItems, index, callback) {
+  if (index < variableidList.length) {
+    var getItem = {
+      "VariableID" : variableidList[index]
+    }
+    getItems.push(getItem);
+    fillBatchGetItem(variableidList, getItems, index+1, callback);
+  } else {
+    callback(true, getItems);
+  }
+}
+
 function getVariablebyDevice(req, res) {
   var deviceid = req.swagger.params.DeviceID.value;
   getVariablebyDeviceID(deviceid, function(ret, data) {
-    if (ret)
-    {
+    if (ret) {
       shareUtil.SendSuccessWithData(res, data);
-    } else
-    {
+    } else {
       shareUtil.SendNotFound(res, data);
     }
   });
@@ -861,8 +865,6 @@ function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, c
   for (var k in variablesToDelete) {
     updateExpr = updateExpr + "Variables[" + variablesToDelete[k] + "], ";
   }
-
-  //console.log("updateExpr = " + updateExpr);
   var updateDevice = {
     TableName : shareUtil.tables.device,
     Key : {DeviceID : deviceid},
@@ -875,20 +877,16 @@ function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, c
       console.error(msg);
       var errmsg = { message: msg };
     } else {
-      //console.log("variables deleted from Device list of Variables!");
       callback(sendData);
     }
   }
 }
 
 function getSingleVariableInternal(index, variables, deviceid, variablesToDelete, deleteIndex, variableout, callback) {
-  if (index < variables.length)
-  {
-    if (index == 0)
-    {
+  if (index < variables.length) {
+    if (index == 0) {
       variableout = [];
     }
-  //  //console.log("variables.Items[0]: " + variables[index]);
     var variablesParams = {
       TableName : shareUtil.tables.variable,
       KeyConditionExpression : "VariableID = :v1",
@@ -896,26 +894,17 @@ function getSingleVariableInternal(index, variables, deviceid, variablesToDelete
     };
     shareUtil.awsclient.query(variablesParams, onQuery);
     function onQuery(err, data) {
-      if (!err)
-      {
-      //  //console.log("no error");
-      //  //console.log("data.count = " + data.Count);
-        if (data.Count == 1)
-        {
+      if (!err)  {
+        if (data.Count == 1) {
           variableout.push(data.Items[0]);
-          //rs//console.log("variableout: " + variableout);
-        } else
-        {
+        } else {
           variablesToDelete[deleteIndex] = index;
-        //  //console.log("variables[index] -> " + variables[index]);
           deleteIndex+=1;
         }
       }
       getSingleVariableInternal(index + 1, variables, deviceid, variablesToDelete, deleteIndex, variableout, callback);
     }
-  }
-  else
-  {
+  } else {
     callback(variableout, variablesToDelete);
   }
 }

@@ -21,7 +21,8 @@ module.exports = {
   addDataByDeviceID: addDataByDeviceID,
   addDataByVariableID: addDataByVariableID,
   addDataByDeviceName: addDataByDeviceName,
-  addDataBySerialNumber: addDataBySerialNumber
+  addDataBySerialNumber: addDataBySerialNumber,
+  fillBatchGetItem: fillBatchGetItem
 };
 
 
@@ -162,7 +163,7 @@ function addDataByDeviceName(req, res) {
   var Data = req.body.Data;
   var timestamp = req.body.Timestamp;
 
-  if(Data.Data.length != 0) {
+  if (Data.Data.length != 0) {
     userManage.getUserbyApiKeyQuery(apiKey, function (ret, data) {
       if (ret) {
         var devices = data.Items[0].Devices;
@@ -215,7 +216,6 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
     timestamp = Math.floor((new Date).getTime()/1000);
     //console.log("timestamp = " + timestamp);
   }
-
   if(deviceid){
     deviceManage.getVariablesFromDevice(deviceid, function(ret1, data1){
       if (ret1) {
@@ -226,7 +226,7 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
           batchGetItem(variableidList, getItems, function(ret2, data2){
             if(ret2){
               var varIDtoNameMap = data2.Responses["Hx.Variable"];
-              ////console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
+              console.log("data2 = " + JSON.stringify(data2, null, 2));
               var dataObj = {};
               convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
                 if (ret3) {
@@ -457,16 +457,14 @@ function batchGetItem(variableidList, getItems, callback){
 }
 
 function fillBatchGetItem(variableidList, getItems, index, callback) {
-  if (index < variableidList.length){
+  if (index < variableidList.length) {
     var getItem = {
       "VariableID" : variableidList[index]
     }
     getItems.push(getItem);
-    ////console.log("getItem = " + JSON.stringify(getItem, null, 2));
     fillBatchGetItem(variableidList, getItems, index+1, callback);
   } else {
     callback(true, getItems);
-  //  //console.log("getItems = " + JSON.stringify(getItems, null, 2));
   }
 }
 
