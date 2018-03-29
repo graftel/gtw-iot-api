@@ -1146,7 +1146,7 @@ function getDeviceByAsset(req, res){
 }
 
 function getDeviceByAssetID(assetid, callback) {
-  //var assetid = req.swagger.params.AssetID.value;
+
   var devicesParams = {
     TableName : shareUtil.tables.assets,
     KeyConditionExpression : "AssetID = :V1",
@@ -1154,69 +1154,41 @@ function getDeviceByAssetID(assetid, callback) {
     ProjectionExpression : "Devices"
   };
   shareUtil.awsclient.query(devicesParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
+  function onQuery(err, data) {
+    if (err)  {
       var msg = "Error:" + JSON.stringify(err, null, 2);
-      //shareUtil.SendInternalErr(res, msg);
       callback(false, msg);
-    } else
-     {
-      var sendData =
-      {
+    } else {
+      var sendData = {
         Items: [],
         Count: 0
       };
-      if (data.Count == 0)
-      {
-        var resErr = {ErrorMsg: "AssetID does not exit or Asset does not contain any Device"};
-        //console.log(resErr);
-        var msg = "AssetID does not exit or Asset does not contain any Device";
-        //shareUtil.SendSuccessWithData(res, sendData);
-        //shareUtil.SendSuccessWithData(res, resErr);
+      if (data.Count == 0) {
+        var msg = "AssetID does not exit";
         callback(false, msg);
-      }
-      else
-      {
-        //console.log("devices = " + devices);
-        //console.log("data.count = " + data.Count);
+      } else {
         var devices = data.Items[0].Devices;
 
-        if (typeof devices == "undefined")
-        {
-          var msg = "undefined";
-          //console.log(msg);
-          //shareUtil.SendSuccessWithData(res, sendData);
+        if (typeof devices == "undefined") {
+          var msg = "Asset does not contain any Device";
           callback(false, msg);
-        }
-        else
-        {
-          if (devices.length == 0)
-          {
+        } else {
+          if (devices.length == 0) {
             var msg = "No devices found in Asset";
-            //console.log(msg);
-            //shareUtil.SendSuccessWithData(res, sendData);
             callback(false, msg);
-          }
-          else
-          {
-            //console.log("devices: " + devices);
-            //console.log("devices.length = " + devices.length);
-            var devicesToDelete = [];
-            var deleteIndex = 0;
-            getSingleDeviceInternal(0, devices, devicesToDelete, deleteIndex, null, function(devicesdata, devicesToDelete){
-              //console.log("devicesToDelete -> " + devicesToDelete);
-              sendData.Items = devicesdata;
-              sendData.Count = devicesdata.length;
-              if (devicesToDelete.length == 0){     // no garbage Devices to delete in Asset's list of Devices
-                  //shareUtil.SendSuccessWithData(res, sendData);
-                  callback(true, sendData);
-              } else
-              {
-                deleteGarbageDevicesInAsset(assetid, devicesToDelete, function(){
-                //shareUtil.SendSuccessWithData(res, sendData);
+          } else {
+            var gottenDev = [];
+            batchGetDevicesAttributes(devices, gottenDev, function(ret, devicesdata) {
+              sendData.Items = devicesdata.Responses[shareUtil.tables.device];
+              sendData.Count = devicesdata.Responses[shareUtil.tables.device].length;
+              if (sendData.Count == devices.length) {
                 callback(true, sendData);
+              } else {      // garbages devices to be deleted in Asset's list of Devices
+                var devicesToDelete = [];
+                getSingleDeviceInternal(0, devices, devicesToDelete, 0, function(devicesToDelete){
+                  deleteGarbageDevicesInAsset(assetid, devicesToDelete, function(){
+                  callback(true, sendData);
+                  });
                 });
               }
             });
@@ -1257,11 +1229,9 @@ function deleteGarbageDevicesInAsset(assetid, devicesToDelete, callback) {
   }
 }
 
-function getSingleDeviceInternal(index, devices, devicesToDelete, deleteIndex, deviceout, callback) {
+function getSingleDeviceInternal(index, devices, devicesToDelete, deleteIndex, callback) {
   if (index < devices.length) {
-    if (index == 0) {
-      deviceout = [];
-    }
+    var deviceout = [];
     var devicesParams = {
       TableName : shareUtil.tables.device,
       KeyConditionExpression : "DeviceID = :v1",
@@ -1277,10 +1247,10 @@ function getSingleDeviceInternal(index, devices, devicesToDelete, deleteIndex, d
           deleteIndex+= 1;
         }
       }
-      getSingleDeviceInternal(index + 1, devices, devicesToDelete, deleteIndex, deviceout, callback);
+      getSingleDeviceInternal(index + 1, devices, devicesToDelete, deleteIndex, callback);
     }
   } else {
-    callback(deviceout, devicesToDelete);
+    callback(devicesToDelete);
   }
 }
 
@@ -1373,57 +1343,6 @@ function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
     fillBatchGetItemDevices(deviceidList, gottenDev, index+1, callback);
   } else {
     callback(true, gottenDev);
-  }
-}
-
-
-//get list of devices by UserID
-function getDeviceByUser2(req, res) {
-  var userid = req.swagger.params.UserID.value;
-  var devicesParams = {
-    TableName : shareUtil.tables.users,
-    KeyConditionExpression : "UserID = :V1",
-    ExpressionAttributeValues :  { ':V1' : userid},
-    ProjectionExpression : "Devices"
-  };
-  shareUtil.awsclient.query(devicesParams, onQuery);
-  function onQuery(err, data) {
-    if (err) {
-      var msg = "Error:" + JSON.stringify(err, null, 2);
-      shareUtil.SendInternalErr(res, msg);
-    } else {
-      var sendData = {
-        Items: [],
-        Count: 0
-      };
-      if (data.Count == 0) {
-        var resErr = {ErrorMsg: "UserID does not exit or Asset does not contain any Device"};
-        shareUtil.SendSuccessWithData(res, resErr);
-      } else {
-        var devices = data.Items[0].Devices;
-        if (typeof devices == "undefined") {
-          shareUtil.SendSuccessWithData(res, sendData);
-        } else {
-          if (devices.length == 0) {
-            shareUtil.SendSuccessWithData(res, sendData);
-          } else {
-            var devicesToDelete = [];
-            var deleteIndex = 0;
-            getSingleDeviceInternal(0, devices, devicesToDelete, deleteIndex, null, function(devicesdata, devicesToDelete) {
-              sendData.Items = devicesdata;
-              sendData.Count = devicesdata.length;
-              if (devicesToDelete.length == 0) {     // no garbage Devices to delete in Asset's list of Devices
-                  shareUtil.SendSuccessWithData(res, sendData);
-              } else {
-                deleteGarbageDevicesInUser(userid, devicesToDelete, function() {
-                shareUtil.SendSuccessWithData(res, sendData);
-                });
-              }
-            });
-          }
-        }
-      }
-    }
   }
 }
 
