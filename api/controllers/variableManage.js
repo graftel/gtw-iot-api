@@ -849,6 +849,7 @@ function fillBatchGetItem(variableidList, getItems, index, callback) {
 }
 
 function getVariablebyDevice(req, res) {
+
   var deviceid = req.swagger.params.DeviceID.value;
   getVariablebyDeviceID(deviceid, function(ret, data) {
     if (ret) {

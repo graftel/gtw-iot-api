@@ -1227,80 +1227,6 @@ function getDeviceByAssetID(assetid, callback) {
   }
 }
 
-//get list of devices by AssetID
-function getDeviceByAssetOld(req, res) {
-  var assetid = req.swagger.params.AssetID.value;
-  var devicesParams = {
-    TableName : shareUtil.tables.assets,
-    KeyConditionExpression : "AssetID = :V1",
-    ExpressionAttributeValues :  { ':V1' : assetid},
-    ProjectionExpression : "Devices"
-  };
-  shareUtil.awsclient.query(devicesParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
-      var msg = "Error:" + JSON.stringify(err, null, 2);
-      shareUtil.SendInternalErr(res, msg);
-    } else
-     {
-      var sendData =
-      {
-        Items: [],
-        Count: 0
-      };
-      if (data.Count == 0)
-      {
-        var resErr = {ErrorMsg: "AssetID does not exit or Asset does not contain any Device"};
-        //console.log(resErr);
-        //shareUtil.SendSuccessWithData(res, sendData);
-        shareUtil.SendSuccessWithData(res, resErr);
-      }
-      else
-      {
-        //console.log("devices = " + devices);
-        //console.log("data.count = " + data.Count);
-        var devices = data.Items[0].Devices;
-
-        if (typeof devices == "undefined")
-        {
-          //console.log("undefined");
-          shareUtil.SendSuccessWithData(res, sendData);
-        }
-        else
-        {
-          if (devices.length == 0)
-          {
-            //console.log("length  = 0");
-            shareUtil.SendSuccessWithData(res, sendData);
-          }
-          else
-          {
-            //console.log("devices: " + devices);
-            //console.log("devices.length = " + devices.length);
-            var devicesToDelete = [];
-            var deleteIndex = 0;
-            getSingleDeviceInternal(0, devices, devicesToDelete, deleteIndex, null, function(devicesdata, devicesToDelete){
-              //console.log("devicesToDelete -> " + devicesToDelete);
-              sendData.Items = devicesdata;
-              sendData.Count = devicesdata.length;
-              if (devicesToDelete.length == 0){     // no garbage Devices to delete in Asset's list of Devices
-                  shareUtil.SendSuccessWithData(res, sendData);
-              } else
-              {
-                deleteGarbageDevicesInAsset(assetid, devicesToDelete, function(){
-                shareUtil.SendSuccessWithData(res, sendData);
-                });
-              }
-            });
-          }
-        }
-      }
-    }
-  }
-}
-
 function deleteGarbageDevicesInAsset(assetid, devicesToDelete, callback) {
 
   var updateExpr = "remove ";
@@ -1358,8 +1284,101 @@ function getSingleDeviceInternal(index, devices, devicesToDelete, deleteIndex, d
   }
 }
 
-//get list of devices by UserID
 function getDeviceByUser(req, res) {
+
+  var userid = req.swagger.params.UserID.value;
+  getDeviceByUserID(userid, function(ret, data) {
+    if (ret) {
+      shareUtil.SendSuccessWithData(res, data);
+    } else {
+      shareUtil.SendInvalidInput(res, data);
+    }
+  });
+}
+
+function getDeviceByUserID(userid, callback) {
+  var devicesParams = {
+    TableName : shareUtil.tables.users,
+    KeyConditionExpression : "UserID = :V1",
+    ExpressionAttributeValues :  { ':V1' : userid},
+    ProjectionExpression : "Devices"
+  };
+  shareUtil.awsclient.query(devicesParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res, msg);
+    } else {
+      var sendData = {
+        Items: [],
+        Count: 0
+      };
+      if (data.Count == 0) {
+        var msg =  "UserID does not exit";
+        callback(false, msg);
+      } else {
+        var devices = data.Items[0].Devices;
+        if (typeof devices == "undefined") {
+          var msg = "User does not contain any Device"
+          callback(false, msg);
+        } else {
+          if (devices.length == 0) {
+            var msg = "No Device found in User";
+            callback(false, msg);
+          } else {
+            var gottenDev = [];
+            batchGetDevicesAttributes(devices, gottenDev, function(ret, devicesdata) {
+            sendData.Items = devicesdata.Responses[shareUtil.tables.device];
+            sendData.Count = devicesdata.Responses[shareUtil.tables.device].length;
+            callback(true, sendData);
+            });
+          }
+        }
+      }
+    }
+  }
+}
+
+function batchGetDevicesAttributes(deviceidList, gottenDev, callback) {
+  fillBatchGetItemDevices(deviceidList, gottenDev, 0, function(ret, data) {
+    if (ret) {
+      var params = {
+        RequestItems : {
+          "Hx.Device" : {
+            Keys : data
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(params, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
+  if (index < deviceidList.length) {
+    var getItem = {
+      "DeviceID" : deviceidList[index]
+    }
+    gottenDev.push(getItem);
+    fillBatchGetItemDevices(deviceidList, gottenDev, index+1, callback);
+  } else {
+    callback(true, gottenDev);
+  }
+}
+
+
+//get list of devices by UserID
+function getDeviceByUser2(req, res) {
   var userid = req.swagger.params.UserID.value;
   var devicesParams = {
     TableName : shareUtil.tables.users,
