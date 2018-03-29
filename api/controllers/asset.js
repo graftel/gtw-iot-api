@@ -37,10 +37,9 @@ module.exports = {
   getDevicesFromAsset: getDevicesFromAsset
 };
 
-function getAssetByUser(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
+function getAssetByUser2(req, res) {
+
   var userid = req.swagger.params.userID.value;
-  // first get assets in UserID
 
   var assetsParams = {
     TableName : shareUtil.tables.users,
@@ -93,6 +92,93 @@ function getAssetByUser(req, res) {
          }
        }
    }
+}
+
+function getAssetByUser(req, res) {
+
+  var userid = req.swagger.params.userID.value;
+  getAssetByUserID(userid, function(ret, data) {
+    if (ret) {
+      shareUtil.SendSuccessWithData(res, data);
+    } else {
+      shareUtil.SendNotFound(res, data);
+    }
+  });
+}
+
+
+function getAssetByUserID(userid, callback) {
+  var assetsParams = {
+    TableName : shareUtil.tables.users,
+    KeyConditionExpression : "UserID = :v1",
+    ExpressionAttributeValues : {':v1' : userid},
+    ProjectionExpression : "Assets"
+  };
+  shareUtil.awsclient.query(assetsParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else {
+      var sendData = {
+        Items: [],
+        Count: 0
+      };
+      if (data.Count == 0) {
+        shareUtil.SendSuccessWithData(res, sendData);
+      } else {
+        var assets = data.Items[0].Assets;
+        if (typeof assets == "undefined") {
+          shareUtil.SendSuccessWithData(res, sendData);
+        } else {
+          var gottenAssets = [];
+          batchGetAssetsAttributes(assets, gottenAssets, function(ret, assetsdata) {
+            sendData.Items = assetsdata.Responses[shareUtil.tables.assets];
+            sendData.Count = assetsdata.Responses[shareUtil.tables.assets].length;
+            callback(true, sendData);
+          });
+        }
+      }
+    }
+  }
+}
+
+
+function batchGetAssetsAttributes(assetidList, gottenAssets, callback) {
+  fillBatchGetItemAssets(assetidList, gottenAssets, 0, function(ret, data) {
+    if (ret) {
+      var dataParams = {
+        RequestItems : {
+          "Hx.Asset" : {
+            Keys : data
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(dataParams, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function fillBatchGetItemAssets(assetidList, getItems, index, callback) {
+  if (index < assetidList.length) {
+    var getItem = {
+      "AssetID" : assetidList[index]
+    }
+    getItems.push(getItem);
+    fillBatchGetItemAssets(assetidList, getItems, index+1, callback);
+  } else {
+    callback(true, getItems);
+  }
 }
 
 function deleteGarbageAssets(userid, assetsToDelete, callback) {

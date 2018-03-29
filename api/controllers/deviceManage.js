@@ -1277,7 +1277,7 @@ function getDeviceByUserID(userid, callback) {
   function onQuery(err, data) {
     if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
-      shareUtil.SendInternalErr(res, msg);
+      callback(false, msg);
     } else {
       var sendData = {
         Items: [],
@@ -1298,9 +1298,9 @@ function getDeviceByUserID(userid, callback) {
           } else {
             var gottenDev = [];
             batchGetDevicesAttributes(devices, gottenDev, function(ret, devicesdata) {
-            sendData.Items = devicesdata.Responses[shareUtil.tables.device];
-            sendData.Count = devicesdata.Responses[shareUtil.tables.device].length;
-            callback(true, sendData);
+              sendData.Items = devicesdata.Responses[shareUtil.tables.device];
+              sendData.Count = devicesdata.Responses[shareUtil.tables.device].length;
+              callback(true, sendData);
             });
           }
         }

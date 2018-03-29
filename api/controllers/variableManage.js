@@ -768,6 +768,18 @@ function deleteVariable(req, res) {
   });
 }
 
+function getVariablebyDevice(req, res) {
+
+  var deviceid = req.swagger.params.DeviceID.value;
+  getVariablebyDeviceID(deviceid, function(ret, data) {
+    if (ret) {
+      shareUtil.SendSuccessWithData(res, data);
+    } else {
+      shareUtil.SendNotFound(res, data);
+    }
+  });
+}
+
 function getVariablebyDeviceID(deviceid, callback) {
   var variablesParams = {
     TableName : shareUtil.tables.device,
@@ -779,7 +791,7 @@ function getVariablebyDeviceID(deviceid, callback) {
   function onQuery(err, data) {
     if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
-      shareUtil.SendInternalErr(res, msg);
+      callback(false, msg);
     } else {
       var sendData = {
         Items: [],
@@ -800,9 +812,9 @@ function getVariablebyDeviceID(deviceid, callback) {
           } else {
             var gottenVar = [];
             batchGetVariablesAttributes(variables, gottenVar, function(ret, variablesdata) {
-            sendData.Items = variablesdata.Responses[shareUtil.tables.variable];
-            sendData.Count = variablesdata.Responses[shareUtil.tables.variable].length;
-            callback(true, sendData);
+              sendData.Items = variablesdata.Responses[shareUtil.tables.variable];
+              sendData.Count = variablesdata.Responses[shareUtil.tables.variable].length;
+              callback(true, sendData);
             });
           }
         }
@@ -846,18 +858,6 @@ function fillBatchGetItem(variableidList, getItems, index, callback) {
   } else {
     callback(true, getItems);
   }
-}
-
-function getVariablebyDevice(req, res) {
-
-  var deviceid = req.swagger.params.DeviceID.value;
-  getVariablebyDeviceID(deviceid, function(ret, data) {
-    if (ret) {
-      shareUtil.SendSuccessWithData(res, data);
-    } else {
-      shareUtil.SendNotFound(res, data);
-    }
-  });
 }
 
 function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, callback) {
