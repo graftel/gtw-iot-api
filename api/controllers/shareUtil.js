@@ -57,7 +57,6 @@ function SendSuccess(res, msg = SUCCESS_MSG) {
   var errmsg = {
     message: msg
   };
-  //console.log(errmsg);
   res.status(200).send(errmsg);
 }
 

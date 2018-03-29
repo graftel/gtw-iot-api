@@ -13,6 +13,7 @@
 
 var userManage = require('./userManage.js');
 var shareUtil = require('./shareUtil.js');
+var deviceManage = require('./deviceManage.js');
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -37,63 +38,6 @@ module.exports = {
   getDevicesFromAsset: getDevicesFromAsset
 };
 
-function getAssetByUser2(req, res) {
-
-  var userid = req.swagger.params.userID.value;
-
-  var assetsParams = {
-    TableName : shareUtil.tables.users,
-    KeyConditionExpression : "UserID = :v1",
-    ExpressionAttributeValues : {':v1' : userid
-                               },
-    ProjectionExpression : "Assets"
-  };
-  shareUtil.awsclient.query(assetsParams, onScan);
-  function onScan(err, data) {
-       if (err) {
-           var msg = "Error:" + JSON.stringify(err, null, 2);
-           shareUtil.SendInternalErr(res,msg);
-       } else {
-         var sendData = {
-           Items: [],
-           Count: 0
-         };
-         if (data.Count == 0)
-         {
-           shareUtil.SendSuccessWithData(res, sendData);
-         }
-         else {
-           var assets = data.Items[0].Assets;
-
-           if (typeof assets == "undefined")
-           {
-             shareUtil.SendSuccessWithData(res, sendData);
-           }
-           else {
-             if (assets.length == 0) {
-                shareUtil.SendSuccessWithData(res, sendData);
-             }
-             else{
-               var assetsToDelete = [];
-               var deleteIndex = 0;
-               getSingleAssetInternal(0, assets, assetsToDelete, deleteIndex ,null, function(assetsdata, assetsToDelete){
-                 sendData.Items = assetsdata;
-                 sendData.Count = assetsdata.length;
-                 if (assetsToDelete.length == 0) {
-                   shareUtil.SendSuccessWithData(res, sendData);
-                 } else {
-                   deleteGarbageAssets(userid, assetsToDelete, function() {
-                    shareUtil.SendSuccessWithData(res, sendData);
-                   });
-                 }
-               });
-             }
-           }
-         }
-       }
-   }
-}
-
 function getAssetByUser(req, res) {
 
   var userid = req.swagger.params.userID.value;
@@ -105,7 +49,6 @@ function getAssetByUser(req, res) {
     }
   });
 }
-
 
 function getAssetByUserID(userid, callback) {
   var assetsParams = {
@@ -142,7 +85,6 @@ function getAssetByUserID(userid, callback) {
     }
   }
 }
-
 
 function batchGetAssetsAttributes(assetidList, gottenAssets, callback) {
   fillBatchGetItemAssets(assetidList, gottenAssets, 0, function(ret, data) {
@@ -272,66 +214,64 @@ function getAssetAttributes(req, res) {
 }
 
 function createAsset(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
-  //console.log(assetobj);
-  if(assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
+  if (assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-  }
-  else {
-    if(!assetobj.DisplayName && !assetobj.UserID)
-    {
-      //console.log("Error: no display name or userID given");
-      shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-    }
-    else {
-      var uuidv1 = require('uuid/v1');
-      var crypto = require('crypto');
-
-      if (assetobj.AssetID){
-        var assetID = assetobj.AssetID;
-      } else {
-        var assetID = uuidv1();
-      }
-
-      var params = {
-        TableName : shareUtil.tables.assets,
-        Item : {
-          AssetID: assetID,
-          AddTimeStamp: Math.floor((new Date).getTime()/1000),
-          LatestTimeStamp: 0,
-          DeviceCount: 0
-        },
-        ConditionExpression : "attribute_not_exists(AssetID)"
-      };
-
-      params.Item = Object.assign(params.Item, assetobj);
-      delete params.Item['UserID'];
-
-      shareUtil.awsclient.put(params, function(err, data) {
-        if (err) {
-            var msg = "Error:" + JSON.stringify(err, null, 2);
-            console.error(msg);
-            shareUtil.SendInternalErr(res,msg);
-        }else{
-            userManage.updateUserAsset(assetobj.UserID, assetID, function(ret1, data){
-                if (ret1){
-                  shareUtil.SendSuccess(res);
-                }
-                else{
-                  var msg = "Error:" + JSON.stringify(data);
-                  shareUtil.SendInternalErr(res,msg);
-                }
+  } else {
+    var displayName = assetobj.DisplayName;
+    var userid = assetobj.UserID;
+    if (displayName) {
+      if (userid) {
+        deviceManage.IsUserExist(userid, function(ret, data) {
+          if (ret) {
+            var uuidv1 = require('uuid/v1');
+            var crypto = require('crypto');
+            if (assetobj.AssetID) {
+              var assetID = assetobj.AssetID;
+            } else {
+              var assetID = uuidv1();
+            }
+            var params = {
+              TableName : shareUtil.tables.assets,
+              Item : {
+                AssetID: assetID,
+                AddTimeStamp: Math.floor((new Date).getTime()/1000),
+                LatestTimeStamp: 0,
+                DeviceCount: 0
+              },
+              ConditionExpression : "attribute_not_exists(AssetID)"
+            };
+            params.Item = Object.assign(params.Item, assetobj);
+            delete params.Item['UserID'];
+            shareUtil.awsclient.put(params, function(err, data) {
+              if (err) {
+                var msg = "Error:" + JSON.stringify(err, null, 2);
+                shareUtil.SendInternalErr(res,msg);
+              } else {
+                userManage.updateUserAsset(assetobj.UserID, assetID, function(ret1, data){
+                  if (ret1){
+                    shareUtil.SendSuccess(res);
+                  } else {
+                    var msg = "Error:" + JSON.stringify(data);
+                    shareUtil.SendInternalErr(res,msg);
+                  }
+                });
+              }
             });
-        }
-      });
+          } else {
+            var msg = "User not found";
+            shareUtil.SendInvalidInput(res, msg);
+          }
+        });
+      } else {
+        var msg = "UserID missing"
+        shareUtil.SendInvalidInput(res, msg);
+      }
+    } else {
+      var msg = "Display Name missing";
+      shareUtil.SendInvalidInput(res, msg);
     }
   }
-
-
-
-  // this sends back a JSON response which is a single string
-
 }
 
 function updateAsset(req, res) {
@@ -641,59 +581,62 @@ function deleteVariableFromAsset(req, res) {
   }
 }
 
-function deleteAsset(req, res){
-
+function deleteAsset(req, res) {
+  console.log("entered");
   var assetid = req.swagger.params.AssetID.value;
   var userid = req.swagger.params.UserID.value;
-
-  var userParams = {
-    TableName: shareUtil.tables.users,
-    KeyConditionExpression : "UserID = :v1",
-    ExpressionAttributeValues : {':v1' : userid},
-    ProjectionExpression : "Assets"
-  }
-
-  shareUtil.awsclient.query(userParams, onQuery);
-  function onQuery(err, data) {
-    if (err) {
-      var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-      shareUtil.SendInternalErr(res);
-    } else
-    {
-      if(data.Count == 0)
-      {
-        var msg = "AssetID does not exist or Asset does not contain any Variable";
-        shareUtil.SendNotFound(res, msg);
-      } else
-      {
-        var assets = data.Items[0].Assets;
-        var assetIndex = assets.indexOf(assetid);
-        if (assetIndex > -1)
-        {
-          removeAssetFromUser(userid, assetIndex, function(ret, data){
-            if (ret) {
-              deleteAssetByID(assetid, function(ret1, data1){
-                if (ret1) {
-                  shareUtil.SendSuccess(res);
+  if (assetid) {
+    if (userid) {
+      var userParams = {
+        TableName: shareUtil.tables.users,
+        KeyConditionExpression : "UserID = :v1",
+        ExpressionAttributeValues : {':v1' : userid},
+        ProjectionExpression : "Assets"
+      }
+      shareUtil.awsclient.query(userParams, onQuery);
+      function onQuery(err, data) {
+        if (err) {
+          var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
+          shareUtil.SendInternalErr(res);
+        } else {
+          if (data.Count == 0) {
+            var msg = "UserID does not exist or User does not contain any Variable";
+            shareUtil.SendNotFound(res, msg);
+          } else {
+            var assets = data.Items[0].Assets;
+            var assetIndex = assets.indexOf(assetid);
+            if (assetIndex > -1) {
+              removeAssetFromUser(userid, assetIndex, function(ret, data) {
+                if (ret) {
+                  deleteAssetByID(assetid, function(ret1, data1) {
+                    if (ret1) {
+                      shareUtil.SendSuccess(res);
+                    } else {
+                      shareUtil.SendInvalidInput(res, data1);
+                    }
+                  })
                 } else {
-                  shareUtil.SendInvalidInput(res, data1);
+                  shareUtil.SendInternalErr(res, data);
                 }
-              })
+              });
             } else {
-              shareUtil.SendInternalErr(res, data);
+              var msg = "asset not found in User";
+              shareUtil.SendNotFound(res, msg);
             }
-          });
-        } else
-        {
-          var msg = "asset not found in User";
-          shareUtil.SendNotFound(res, msg);
+          }
         }
       }
+    } else {
+      var msg = "UserID missing";
+      shareUtil.SendInvalidInput(res, msg);
     }
+  } else {
+    var msg = "AssetID missing";
+    shareUtil.SendInvalidInput(res, msg);
   }
 }
 
-function deleteAssetByID(assetid, callback){
+function deleteAssetByID(assetid, callback) {
 
   var deleteParams = {
     TableName : shareUtil.tables.assets,
@@ -713,9 +656,7 @@ function deleteAssetByID(assetid, callback){
 }
 
 function removeAssetFromUser(userid, assetIndex, callback) {
-
   var updateExpr = "remove Assets[" + assetIndex + "]";
-
   var updateUser = {
     TableName: shareUtil.tables.users,
     Key: {UserID : userid},
@@ -723,13 +664,10 @@ function removeAssetFromUser(userid, assetIndex, callback) {
   };
   shareUtil.awsclient.update(updateUser, onUpdate);
   function onUpdate (err, data) {
-    if (err)
-    {
-      //console.log("updateUser failed")
+    if (err) {
       var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       callback(false, msg);
     } else {
-      //console.log("user updated");
       callback(true, null);
     }
   }

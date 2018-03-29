@@ -1,6 +1,9 @@
 
 var shareUtil = require('./shareUtil.js');
+var levelup = require('levelup');
+var leveldown = require('leveldown');
 
+var dbTest = levelup(leveldown('./mydb'));
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -66,26 +69,17 @@ function getDevicesFromUser(userid, callback) {
 
 function createUser(req, res) {
   var userobj = req.body;
-  //console.log(userobj);
   if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
-    //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res);
-  }
-  else {
-    if(!userobj.EmailAddress && !userobj.Password)
-    {
-      //console.log("is valid = false1");
-       shareUtil.SendInvalidInput(res);
-    }
-    else {
-
+  } else {
+    if (!userobj.EmailAddress || !userobj.Password) {
+      var msg = "Missing Email Address and/or Password";
+       shareUtil.SendInvalidInput(res, msg);
+    } else {
       IsEmailExist(userobj.EmailAddress, function(ret1,data){
-        if (ret1) { // exists
-            //console.log("exists");
-            shareUtil.SendInvalidInput(res, 'User already exists');
-        }
-        else {
-          // auto generate user id
+        if (ret1) {       // exists
+          shareUtil.SendInvalidInput(res, 'User already exists');
+        } else {          // auto generate user id
           var epochtime = Math.floor((new Date).getTime()/1000);
           var uuidv1 = require('uuid/v1');
           var crypto = require('crypto');
@@ -101,24 +95,19 @@ function createUser(req, res) {
             ConditionExpression : "attribute_not_exists(UserID)"
           };
           shareUtil.awsclient.put(params, function(err, data) {
-          if (err) {
-            var msg = "Error:" + JSON.stringify(err, null, 2);
-            console.error(msg);
-            shareUtil.SendInternalErr(res,msg);
-          }else{
-            completeRegistrationEmail(userobj.EmailAddress, userobj.UserID, userobj.VerificationCode);
-
-            shareUtil.SendSuccessWithData(res, userobj);
-          }
+            if (err) {
+              var msg = "Error:" + JSON.stringify(err, null, 2);
+              console.error(msg);
+              shareUtil.SendInternalErr(res,msg);
+            } else {
+              completeRegistrationEmail(userobj.EmailAddress, userobj.UserID, userobj.VerificationCode);
+              shareUtil.SendSuccessWithData(res, userobj);
+            }
           });
         }
-
       });
     }
   }
-
-
-  // this sends back a JSON response which is a single string
 }
 
 function resetUser(req, res) {
@@ -307,23 +296,27 @@ function getSettings(req, res) {
           console.error(msg);
           shareUtil.SendInternalErr(res,msg);
         }else{
-          //console.log(data);
+          console.log(JSON.stringify(data, null, 2));
           if (data.Count == 1) {
-            if (typeof data.Items[0].Settings.ParameterList == "undefined")
-            {
-              var msg = "Error: Cannot find data"
-              shareUtil.SendInvalidInput(res,shareUtil.constants.NOT_EXIST);
-            }
-            else {
-              shareUtil.SendSuccessWithData(res, data.Items[0].Settings.ParameterList);
-            }
+              var dataTest = "d13c1010-faf7-ds54f5dsaf55f4f5ad4f-ff-f";
+              dbTest.put('dataTest3', dataTest, function(err) {
+                if (err) return console.log('erroooor', err);
 
+                dbTest.get('dataTest3', function(err, value) {
+                  if (err) return console.log('get error', err);
+
+                  //console.log('dataTest = ' + JSON.stringify(value, null, 2));
+                  console.log('dataTest = ' + value);
+                //  var data = JSON.stringify(value.data, null, 2);
+                //  console.log("data = " + Object.values(value).toString());
+                });
+              });
+              shareUtil.SendSuccessWithData(res, data.Items[0]);
           }
           else {
               var msg = "Error: Cannot find data"
              shareUtil.SendInvalidInput(res,shareUtil.constants.NOT_EXIST);
           }
-
         }
       });
   }
@@ -568,7 +561,7 @@ function activate(req, res) {
   // this sends back a JSON response which is a single string
 }
 
-function authenticate(apikey, callback) {
+function authenticateOld(apikey, callback) {
   var Params = {
    TableName : shareUtil.tables.users,
    FilterExpression : "ApiKey = :v1",
@@ -583,63 +576,67 @@ function authenticate(apikey, callback) {
          }
          callback(false, msg);
      } else {
-       if (data.Count == 0)
-       {
+       if (data.Count == 0) {
          callback(false, data);
-       }
-       else {
+       } else {
          callback(true, data);
        }
+     }
+  }
+}
 
+function authenticate(apikey, callback) {
+  var Params = {
+   TableName : shareUtil.tables.users,
+   IndexName : "ApiKey-index",
+   KeyConditionExpression : "ApiKey = :v1",
+   ExpressionAttributeValues : {':v1' : apikey.toString()}
+ };
+  shareUtil.awsclient.query(Params, onQuery);
+  function onQuery(err, data) {
+     if (err) {
+         var err_msg = "Error:" + JSON.stringify(err, null, 2);
+         var msg = {
+           message: err_msg
+         }
+         callback(false, msg);
+     } else {
+       if (data.Count == 0) {
+         callback(false, data);
+       } else {
+         callback(true, data);
+       }
      }
   }
 }
 
 function logIn(req, res){
   var userobj = req.body;
-  //console.log(userobj);
-  if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
-    //console.log("is valid = false0");
+  if (userobj.constructor === Object && Object.keys(userobj).length === 0) {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-  }
-  else {
-    if(!userobj.EmailAddress && !userobj.Password)
-    {
-      //console.log("is valid = false1");
+  } else {
+    if(!userobj.EmailAddress && !userobj.Password) {
        shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-    }
-    else {
-
-      IsEmailExist(userobj.EmailAddress, function(ret1,data){
-        if (ret1) { // exists
-          // check password
-          if (data.Items[0].Password == userobj.Password)
-          {
-             if (data.Items[0].Active == 0)
-             {
-               singleDeleteUser(data.Items[0].UserID, function(err,data){
+    } else {
+      IsEmailExist(userobj.EmailAddress, function(ret1,data) {
+        if (ret1) {     // exists
+          if (data.Items[0].Password == userobj.Password) {  // check password
+             if (data.Items[0].Active == 0) {
+               singleDeleteUser(data.Items[0].UserID, function(err,data) {
                   shareUtil.SendInvalidInput(res, 'Please register again');
                });
-             }
-             else {
+             } else {
                 shareUtil.SendSuccessWithData(res, data.Items[0]);
              }
-
-          }
-          else {
+          } else {
             shareUtil.SendInvalidInput(res, 'Wrong credentials');
           }
-        }
-        else {
+        } else {
           shareUtil.SendInvalidInput(res, 'Wrong credentials');
         }
-
       });
     }
   }
-
-
-  // this sends back a JSON response which is a single string
 }
 
 function activateUser(userid, callback){
@@ -702,14 +699,12 @@ function getUserbyApiKeyQuery(apiKey, callback) {
     ExpressionAttributeValues : { ':v1' : apiKey},
     ProjectionExpression : "UserID, Devices"
   }
-  ////console.log(params);
   shareUtil.awsclient.query(params, onQuery);
   function onQuery(err, data) {
     if (err){
       var msg = JSON.stringify(err, null, 2);
       callback(false, msg);
     } else {
-      ////console.log("data = " + JSON.stringify(data, null, 2));
       if (data.Count == 0) {
         var msg = "No user associated with this ApiKey";
         callback(false, msg);
@@ -742,7 +737,7 @@ function sendForgotPasswordEmail(emailid, VerificationCode) {
 
 function completeRegistrationEmail(emailid, userid, verificationCode) {
   const sgMail = require('@sendgrid/mail');
-  sgMail.setApiKey(require('../../sg.js').SENDGRID_API_KEY);
+  sgMail.setApiKey(require('../../../../sg.js').SENDGRID_API_KEY);
   var link =  "http://localhost:3000/activate?id=" + userid + "&code=" + verificationCode;
   const msg = {
     to: emailid,
