@@ -32,7 +32,8 @@ module.exports = {
   isItemInList: isItemInList,
   getDevicesByName : getDevicesByName,
   getDevicesDisplayName : getDevicesDisplayName,
-  getDeviceIdBySerialNumber: getDeviceIdBySerialNumber
+  getDeviceIdBySerialNumber: getDeviceIdBySerialNumber,
+  fillBatchGetItemDevices: fillBatchGetItemDevices
 };
 
 

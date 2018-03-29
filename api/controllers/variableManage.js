@@ -1005,39 +1005,132 @@ function getVariableByAssetIDOld(req, res) {
 function getVariableByAsset(req, res) {
 
   var assetid = req.swagger.params.AssetID.value;
-
-  var sendData =
-  {
+  var sendData = {
     Items: [],
     Count: 0
   };
   asset.getDevicesFromAsset(assetid, function(ret, data) {
-    if (ret)
-    {
+    if (ret) {
       var devices = data.Devices;
       var variablesout = [];
-      console.log("devices[] = " + devices);
       if (devices) {
-        getVariablesFromDeviceArray(devices, 0, variablesout, function(ret, data) {
-          if (ret){
-            sendData.Items = variablesout;
-            sendData.Count = variablesout.length;
-            shareUtil.SendSuccessWithData(res, sendData);
-          } else
-          {
-            shareUtil.SendNotFound(res, data);
+        var gottenDevVar = [];
+        batchGetDevicesVariables(devices, gottenDevVar, function (ret1, data1) {
+          if (ret1) {
+            var devicesVar = data1.Responses['Hx.Device'];
+            var gottenVar = [];
+            batchGetVariablesAttributesFromDevices(devicesVar, 0, gottenVar, function(ret2, data2) {
+              if (ret2) {
+                console.log("data2 = " + JSON.stringify(data2, null, 2));
+                sendData.Items = data2.Responses[shareUtil.tables.variable];
+                sendData.Count = data2.Responses[shareUtil.tables.variable].length;
+                shareUtil.SendSuccessWithData(res, sendData);
+              } else {
+                shareUtil.SendNotFound(res, data);
+              }
+            });
           }
         });
       } else {
         var msg = "No device in Asset -> no variable in Asset";
         shareUtil.SendInvalidInput(res, msg);
       }
-    } else
-    {
-      // get Devices form Asset failed
+    } else {
+      // get Devices from Asset failed
       shareUtil.SendNotFound(res, data);
     }
   });
+}
+
+function batchGetVariablesAttributesFromDevices(devicesVar, index, gottenVar, callback) {
+  fillBatchGetItemVariablesFromDevices(devicesVar, gottenVar, 0, function(ret, data) {
+    if (ret) {
+      var dataParams = {
+        RequestItems : {
+          "Hx.Variable" : {
+            Keys : data
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(dataParams, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index, callback) {
+  if (index < devicesVar.length) {
+    if (devicesVar[index].Variables) {
+      pushVariablesIntoVarArray(devicesVar[index].Variables, 0, getItems, function(ret, data) {
+        if (ret) {
+          fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index+1, callback);
+        }
+      });
+    } else {
+      fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index+1, callback);
+    }
+  } else {
+    callback(true, getItems);
+  }
+}
+
+function pushVariablesIntoVarArray(variables, index, getItems, callback) {
+  if (index < variables.length) {
+    var getItem = {
+      "VariableID" : variables[index]
+    }
+    getItems.push(getItem);
+    pushVariablesIntoVarArray(variables, index+1, getItems, callback)
+  } else {
+    callback(true, getItems);
+  }
+}
+
+function batchGetDevicesVariables(deviceidList, gottenDev, callback) {
+  deviceManage.fillBatchGetItemDevices(deviceidList, gottenDev, 0, function(ret, data) {
+    if (ret) {
+      var params = {
+        RequestItems : {
+          "Hx.Device" : {
+            Keys : data,
+            ProjectionExpression : "Variables"
+          }
+        }
+      }
+      shareUtil.awsclient.batchGet(params, onGet);
+      function onGet(err, data1) {
+        if (err) {
+          var msg = "Error:" +  JSON.stringify(err, null, 2);
+          callback(false, msg);
+        } else {
+          callback(true, data1);
+        }
+      }
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
+  if (index < deviceidList.length) {
+    var getItem = {
+      "DeviceID" : deviceidList[index]
+    }
+    gottenDev.push(getItem);
+    fillBatchGetItemDevices(deviceidList, gottenDev, index+1, callback);
+  } else {
+    callback(true, gottenDev);
+  }
 }
 
 function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, callback) {
