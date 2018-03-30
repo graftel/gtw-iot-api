@@ -11,6 +11,8 @@
     "@sendgrid/mail": "^6.2.1",
     "aws-sdk": "^2.179.0",
     "express": "^4.12.3",
+    "leveldown": "^3.0.0",
+    "levelup": "^2.0.2",
     "npm": "^5.8.0",
     "os": "^0.1.1",
     "swagger-express-mw": "^0.1.0",
