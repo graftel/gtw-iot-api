@@ -2,6 +2,8 @@ var shareUtil = require('./shareUtil.js');
 var asset = require('./asset.js');
 var deviceManage = require('./deviceManage.js');
 
+var dbCache = shareUtil.dbCache;
+
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -26,44 +28,62 @@ module.exports = {
 
 
 function updateVariableIDInDevice(variableID, deviceID, callback) {
-  if(!deviceID)
-  {
+  if(!deviceID) {
     callback(false, null);
-  }
-  else {
+  } else {
     checkVariableInDevice(variableID, deviceID, function(ret, msg1) {
       if (ret) {
         var updateParams = {
           TableName : shareUtil.tables.device,
-          Key : {
-            DeviceID : deviceID,
-                },
-        UpdateExpression : 'set #variable = list_append(if_not_exists(#variable, :empty_list), :id)',
-        ExpressionAttributeNames: {
-            '#variable': 'Variables'
-          },
-        ExpressionAttributeValues: {
-          ':id': [variableID],
-          ':empty_list': []
-        }
-
+          Key : { DeviceID : deviceID },
+          UpdateExpression : 'set #variable = list_append(if_not_exists(#variable, :empty_list), :id)',
+          ExpressionAttributeNames: { '#variable': 'Variables' },
+          ExpressionAttributeValues: {
+            ':id': [variableID],
+            ':empty_list': []
+          }
         };
-
         shareUtil.awsclient.update(updateParams, function (err, data) {
-            if (err) {
-                var msg = "Error:" +  JSON.stringify(err, null, 2);
-                console.error(msg);
-                callback(false,msg);
-            } else {
-                callback(true,null);
-            }
+          if (err) {
+              var msg = "Error:" +  JSON.stringify(err, null, 2);
+              console.error(msg);
+              callback(false,msg);
+          } else {
+            callback(true,null);
+          }
         });
-      }
-      else {
+      } else {
         callback(false, msg1 );
       }
     });
   }
+}
+
+function updateDeviceCache(deviceid, variableid, variableName, callback) {
+  dbCache.get(deviceid, function(err, value) {
+    if (err) {
+      console.log('get error', err);
+      var cacheObj = {};
+      //cacheObj.variableName = variableid
+    } else {
+      var cacheObj = JSON.parse(value);
+      console.log("cacheObj = " + JSON.stringify(cacheObj, null, 2));
+      var indexVarNameToDelete = Object.values(cacheObj).indexOf(variableid);
+      var varNameToDelete = Object.keys(cacheObj)[indexVarNameToDelete]
+      delete cacheObj[varNameToDelete];
+    }
+    cacheObj[variableName] = variableid;
+    var cacheString = JSON.stringify(cacheObj, null, 2);
+    console.log("cacheString = " + cacheString);
+    dbCache.put(deviceid, cacheString, function(err) {
+      if (err){
+        console.log('put error', err);
+        callback(false);
+      } else {
+        callback(true);
+      }
+    });
+  });
 }
 
 function checkVariableInDevice(variableID, deviceID, callback) {    //return true if Variable NOT in Device
@@ -116,7 +136,7 @@ function addVariableInternal(variableobj, deviceid, res) {
     ConditionExpression : "attribute_not_exists(VariableID)"
   };
   console.log("variableobj.DevID = " + deviceid);
-  if(variableobj.VariableName) {
+  if (variableobj.VariableName) {
     isVariableNameUniqueInDevice(variableobj.VariableName, deviceid, function(ret, data) {
       if (ret) {
         params.Item = Object.assign(params.Item, variableobj);
@@ -127,20 +147,25 @@ function addVariableInternal(variableobj, deviceid, res) {
             var msg = "Error:" + JSON.stringify(err, null, 2);
             shareUtil.SendInternalErr(res,msg);
           } else {
-            if (deviceid)
-            {
-              updateVariableIDInDevice(variableID, deviceid, function(ret1, data){
-                if (ret1)
-                {
-                  shareUtil.SendSuccess(res);
-                } else
-                {
+            if (deviceid) {
+              updateVariableIDInDevice(variableID, deviceid, function(ret1, data) {
+                if (ret1) {
+                  updateDeviceCache(deviceid, variableID, variableobj.VariableName, function(err) {
+                    if (err) {
+                      var msg = "cache of Device not updated"
+                      console.log(msg);
+                      shareUtil.SendInternalErr(res, msg);
+                    } else {
+                      console.log("Device cache updated");
+                      shareUtil.SendSuccess(res);
+                    }
+                  });
+                } else {
                   var msg = "Error:" + JSON.stringify(data) + "update failed";
                   shareUtil.SendInternalErr(res,msg);
                 }
               });
-            } else
-            {
+            } else {
               //console.log("variableID = "+ variableID);
               shareUtil.SendSuccess(res);
             }
@@ -150,8 +175,7 @@ function addVariableInternal(variableobj, deviceid, res) {
         shareUtil.SendNotFound(res, data);
       }
     });
-  } else
-  {
+  } else {
     var msg ="VariableName missing";
     shareUtil.SendInvalidInput(res, msg);
   }
@@ -427,21 +451,17 @@ function addVariableToAsset(req, res) {
 }
 
 function updateVariable(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
+
   var variableobj = req.body;
   var isValid = true;
-  ////console.log(variableobj);
-  if(variableobj.constructor === Object && Object.keys(variableobj).length === 0) {
+  if (variableobj.constructor === Object && Object.keys(variableobj).length === 0) {
     SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-  }
-  else {
-    if(!variableobj.VariableID)
-    {
+  } else {
+    if(!variableobj.VariableID) {
       var msg = "Invalid Input: VariableID required";
       shareUtil.SendInvalidInput(res, msg);
-    }
-    else {
-      IsVariableExist(variableobj.VariableID, function(ret1, data){
+    } else {
+      IsVariableExist(variableobj.VariableID, function(ret1, data) {
         if (ret1) {
           if (variableobj.VariableName) {
             if (variableobj.DeviceID) {
@@ -522,7 +542,18 @@ function updateVariableInternal(variableobj, data, callback) {
       console.error(msg);
       callbcak(false, msg);
     } else {
-      callback(true);
+      if (variableobj.VariableName) {
+        updateDeviceCache(variableobj.DeviceID, variableobj.VariableID, variableobj.VariableName, function(ret, data1) {
+          if (ret) {
+            callback(true);
+          } else {
+            var msg = "Device cache not updated"
+            callback(false, msg);
+          }
+        });
+      } else {
+        callback(true);
+      }
     }
   });
 }
@@ -604,7 +635,14 @@ function findVariableIndexInDevice(deviceID, variableID, callback){
       if (index > 0){
         deleteVarFromDeviceList(variableIndex, deviceID, function(ret2, msg){
           if (ret2){
-            callback(true);
+            deleteVariableFromDeviceCache(deviceID, variableID, function(ret3) {
+              if (ret3) {
+                callback(true);
+              } else {
+                var msg = "Delete variable from Device cache has failed";
+                callback(false, msg);
+              }
+            })
           } else
           {
             callback(false, msg);
@@ -640,6 +678,30 @@ function deleteVarFromDeviceList(variableIndex, deviceID, callback) {
       }
     }
   }
+}
+
+function deleteVariableFromDeviceCache(deviceid, variableid, callback) {
+  dbCache.get(deviceid, function(err, value) {
+    if (err) {
+      console.log('get error', err);
+    } else {
+      var cacheObj = JSON.parse(value);
+      console.log("cacheObj = " + JSON.stringify(cacheObj, null, 2));
+      var indexVarNameToDelete = Object.values(cacheObj).indexOf(variableid);
+      var varNameToDelete = Object.keys(cacheObj)[indexVarNameToDelete]
+      delete cacheObj[varNameToDelete];
+      var cacheString = JSON.stringify(cacheObj, null, 2);
+      console.log("cacheString = " + cacheString);
+      dbCache.put(deviceid, cacheString, function(err) {
+        if (err){
+          console.log('put error', err);
+          callback(false);
+        } else {
+          callback(true);
+        }
+      });
+    }
+  });
 }
 
 function findVariableIndexInAsset(assetID, variableID, callback){

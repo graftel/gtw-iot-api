@@ -4,6 +4,9 @@ const os = require('os');
 AWS.config.loadFromPath(os.homedir() + '/.aws/config.json');
 var docClient = new AWS.DynamoDB.DocumentClient();
 
+var levelup = require('levelup');
+var leveldown = require('leveldown');
+
 const INVALID_INPUT = "Invalid Input";
 const ALREADY_EXIST = "Item Already Exist";
 const SUCCESS_MSG = "Success";
@@ -20,6 +23,9 @@ var tables = {
     param: "Hx.Parameters"
 };
 
+var dbTest = levelup(leveldown('./mydb'));
+var dbCache = levelup(leveldown('./mydbCache'));
+
 module.exports = {
   tables: tables,
   constants: {
@@ -29,6 +35,8 @@ module.exports = {
     NOT_EXIST: NOT_EXIST,
     INTERNAL_ERR: INTERNAL_ERR
   },
+  dbTest,
+  dbCache,
   awsclient: docClient,
   SendInvalidInput: SendInvalidInput,
   SendSuccess: SendSuccess,

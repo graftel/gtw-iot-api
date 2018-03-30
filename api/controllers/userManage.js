@@ -3,7 +3,7 @@ var shareUtil = require('./shareUtil.js');
 var levelup = require('levelup');
 var leveldown = require('leveldown');
 
-var dbTest = levelup(leveldown('./mydb'));
+var dbTest = shareUtil.dbTest;
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -38,7 +38,6 @@ function getDevicesFromUser(userid, callback) {
 
   var usersParams = {
     TableName : shareUtil.tables.users,
-    //TableName : "Hx.Asset",
     KeyConditionExpression : "UserID = :V1",
     ExpressionAttributeValues :  { ':V1' : userid},
     ProjectionExpression : "Devices"
@@ -278,47 +277,42 @@ function updateUserAsset(userID, assetID, callback) {
 function getSettings(req, res) {
   var userid = req.swagger.params.userID.value;
 
-  if (typeof userid == "undefined")
-  {
+  if (typeof userid == "undefined") {
     shareUtil.SendInvalidInput(res);
-  }
-  else {
-
-        var params = {
-          TableName: shareUtil.tables.users,
-          KeyConditionExpression : "UserID = :v1",
-          ExpressionAttributeValues : {':v1' : userid.toString()}
-        };
-        //console.log(params)
-        shareUtil.awsclient.query(params, function(err, data) {
-        if (err) {
-          var msg = "Error:" + JSON.stringify(err, null, 2);
-          console.error(msg);
-          shareUtil.SendInternalErr(res,msg);
-        }else{
-          console.log(JSON.stringify(data, null, 2));
-          if (data.Count == 1) {
-              var dataTest = "d13c1010-faf7-ds54f5dsaf55f4f5ad4f-ff-f";
-              dbTest.put('dataTest3', dataTest, function(err) {
-                if (err) return console.log('erroooor', err);
-
-                dbTest.get('dataTest3', function(err, value) {
-                  if (err) return console.log('get error', err);
-
-                  //console.log('dataTest = ' + JSON.stringify(value, null, 2));
-                  console.log('dataTest = ' + value);
-                //  var data = JSON.stringify(value.data, null, 2);
-                //  console.log("data = " + Object.values(value).toString());
-                });
-              });
-              shareUtil.SendSuccessWithData(res, data.Items[0]);
-          }
-          else {
-              var msg = "Error: Cannot find data"
-             shareUtil.SendInvalidInput(res,shareUtil.constants.NOT_EXIST);
-          }
+  } else {
+    var params = {
+      TableName: shareUtil.tables.users,
+      KeyConditionExpression : "UserID = :v1",
+      ExpressionAttributeValues : {':v1' : userid.toString()}
+    };
+    shareUtil.awsclient.query(params, function(err, data) {
+      if (err) {
+        var msg = "Error:" + JSON.stringify(err, null, 2);
+        console.error(msg);
+        shareUtil.SendInternalErr(res,msg);
+      } else {
+        console.log(JSON.stringify(data, null, 2));
+        if (data.Count == 1) {
+          var devID = "d13c1010-faf7-11e7-95fe-3f76e4be787c";
+          var devID1 = "d13c1010-faf7-11e7-95fe-3f76e4be78yuckj";
+          var dataTest = '{"data" : "d13c1010-faf7-ds54f5dsaf55f4f5ad4f-ff-f", "data2" : "data2Value"}';
+          dbTest.put(devID, dataTest, function(err) {
+          if (err) return console.log('erroooor', err);
+            dbTest.get(devID, function(err, value) {
+            if (err) return console.log('get error', err);
+              console.log('dataTest = ' + value);
+              var obj = JSON.parse(value);
+              console.log("obj = " + JSON.stringify(obj, null, 2));
+              console.log("obj.data2 = " + obj.data2);
+            });
+          });
+          shareUtil.SendSuccessWithData(res, data.Items[0]);
+        } else {
+          var msg = "Error: Cannot find data"
+          shareUtil.SendInvalidInput(res,shareUtil.constants.NOT_EXIST);
         }
-      });
+      }
+    });
   }
 
   // this sends back a JSON response which is a single string
