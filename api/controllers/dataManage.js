@@ -176,14 +176,19 @@ function addDataByDeviceName(req, res) {
             convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, 0, function(ret2, data2) {
               if (ret2) {
                 var deviceid = data2[deviceName];
-                addDataByDeviceIDInternal(deviceid, Data, timestamp, function(ret, data) {
-                  if (ret) {
-                    shareUtil.SendSuccess(res);
-                  } else {
-                    var msg = "Error: " + JSON.stringify(data, null, 2);
-                    shareUtil.SendInternalErr(res, msg);
-                  }
-                });
+                if (deviceid) {
+                  addDataByDeviceIDInternal(deviceid, Data, timestamp, function(ret, data) {
+                    if (ret) {
+                      shareUtil.SendSuccess(res);
+                    } else {
+                      var msg = "Error: " + JSON.stringify(data, null, 2);
+                      shareUtil.SendInternalErr(res, msg);
+                    }
+                  });
+                } else {
+                  var msg = "No device found with this Device name";
+                  shareUtil.SendInvalidInput(res, msg);
+                }
               } else {
                 shareUtil.SendInvalidInput(res);
               }
@@ -213,6 +218,7 @@ function convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, index, callba
   }
 }
 
+// function to add data by deviceID not using the cache
 function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
   if (!timestamp) {
     timestamp = Math.floor((new Date).getTime()/1000);
@@ -223,7 +229,6 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
       if (ret1) {
         var variableidList = data1.Variables;
         var getItems = [];
-        ////console.log("variableidList = " + variableidList);
         if(variableidList){
           batchGetItem(variableidList, getItems, function(ret2, data2){
             if(ret2){
@@ -238,11 +243,9 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
                       var valueToVarIDMap = [];
                       mapValueToVarID(data3, data7, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
                         if (ret4) {
-                          ////console.log("data4 = " + JSON.stringify(data4, null, 2));
                           var itemsToAddArray = [];
                           fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
                             if (ret5) {
-                              ////console.log("data5 = " + JSON.stringify(data5, null, 2));
                               batchAddData(data5, function(ret6, data6) {
                                 if (ret6) {
                                   callback(true);
@@ -273,7 +276,6 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
         } else {
           // Case whre there is no Variable inside the Device
           var varIDtoNameMap = [];
-          ////console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
           var dataObj = {};
           convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
             if (ret3) {
@@ -283,11 +285,9 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
                   var valueToVarIDMap = [];
                   mapValueToVarID(data3, data7, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
                     if (ret4) {
-                      ////console.log("data4 = " + JSON.stringify(data4, null, 2));
                       var itemsToAddArray = [];
                       fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
                         if (ret5) {
-                          ////console.log("data5 = " + JSON.stringify(data5, null, 2));
                           batchAddData(data5, function(ret6, data6) {
                             if (ret6) {
                               callback(true);
@@ -322,10 +322,10 @@ function addDataByDeviceIDInternal(deviceid, data, timestamp, callback) {
   }
 }
 
+// function to add data by deviceID using the cache
 function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
   if (!timestamp) {
     timestamp = Math.floor((new Date).getTime()/1000);
-    //console.log("timestamp = " + timestamp);
   }
   if(deviceid){
     dbCache.get(deviceid, function(err, value) {
@@ -339,7 +339,6 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
               batchGetItem(variableidList, getItems, function(ret2, data2){
                 if(ret2){
                   var varIDtoNameMap = data2.Responses["Hx.Variable"];
-                  console.log("data2 = " + JSON.stringify(data2, null, 2));
                   var dataObj = {};
                   convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
                     if (ret3) {
@@ -349,33 +348,13 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
                           var devCache = {};
                           converVarNametoVarIDtArrayIntoObj(varIDtoNameMap, devCache, 0, function(ret8, data8) {
                             if (ret8) {
-                              console.log("data8 = " + JSON.stringify(data8, null, 2));
-                              //var dataCache = JSON.stringify(data8, null, 2);
-                              //console.log("dataCache = " + dataCache)
-                              /*dbCache.put(deviceid, dataCache, function(err) {
-                                if(err) {
-                                  return console.log('put error', err);
-                                } /*else {
-                                  dbCache.get(deviceid, function(err, value) {
-                                    if (err) {
-                                      return console.log('get error', err);
-                                    } else {
-                                      console.log('value = ' + value);
-                                      var obj = JSON.parse(value);
-                                      console.log("obj = " + JSON.stringify(obj, null, 2));
-                                      console.log("obj.testvar2 = " + obj.testvar2);
-                                    }
-                                  });
-                                }
-                              });*/
                               var valueToVarIDMap = [];
-                              mapValueToVarID2(data3, data8, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
+                              var variablesNotInCache = {};
+                              mapValueToVarID3(data3, data8, valueToVarIDMap, 0, deviceid, variablesNotInCache, function(ret4, data4) {
                                 if (ret4) {
-                                  ////console.log("data4 = " + JSON.stringify(data4, null, 2));
                                   var itemsToAddArray = [];
                                   fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
                                     if (ret5) {
-                                      ////console.log("data5 = " + JSON.stringify(data5, null, 2));
                                       batchAddData(data5, function(ret6, data6) {
                                         if (ret6) {
                                           callback(true);
@@ -408,9 +387,8 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
                 }
               });
             } else {
-              // Case whre there is no Variable inside the Device
+              // Case where there is no Variable inside the Device
               var varIDtoNameMap = [];
-              ////console.log("varIDtoNameMap = " + JSON.stringify(varIDtoNameMap, null, 2));
               var dataObj = {};
               convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
                 if (ret3) {
@@ -418,13 +396,12 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
                   convertVarIDtoVarNameArrayIntoObj(varIDtoNameMap, varObj, 0, function(ret7, data7) {
                     if (ret7) {
                       var valueToVarIDMap = [];
-                      mapValueToVarID2(data3, data7, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
+                      var variablesNotInCache = {};
+                      mapValueToVarID3(data3, data7, valueToVarIDMap, 0, deviceid, variablesNotInCache, function(ret4, data4) {
                         if (ret4) {
-                          ////console.log("data4 = " + JSON.stringify(data4, null, 2));
                           var itemsToAddArray = [];
                           fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
                             if (ret5) {
-                              ////console.log("data5 = " + JSON.stringify(data5, null, 2));
                               batchAddData(data5, function(ret6, data6) {
                                 if (ret6) {
                                   callback(true);
@@ -454,16 +431,13 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
           }
         });
       } else {    // cache for device exist
-        console.log('value = ' + value);
         var obj = JSON.parse(value);
-        console.log("obj = " + JSON.stringify(obj, null, 2));
-        console.log("obj.testvar2 = " + obj.testvar2);
         var valueToVarIDMap = [];
         var dataObj = {};
         var variablesNotInCache = {};
         convertDataArrToObj(data.Data, dataObj, 0, function(ret3, data3) {
           if (ret3) {
-            mapValueToVarID2(data3, obj, valueToVarIDMap, 0, deviceid, function(ret4, data4) {
+            mapValueToVarID3(data3, obj, valueToVarIDMap, 0, deviceid, variablesNotInCache, function(ret4, data4) {
               if (ret4) {
                 var itemsToAddArray = [];
                 fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
@@ -487,7 +461,6 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
             callback(false);
           }
         });
-      //  callback(true);
       }
     });
   } else {
@@ -578,7 +551,6 @@ function mapValueToVarID2(varNameToValueMap, varNametoIDMap, valueToVarIDMap, in
 }
 
 function mapValueToVarID3(varNameToValueMap, varNametoIDMap, valueToVarIDMap, index, deviceid, variablesNotInCache, callback) {
-
   if (index < Object.keys(varNameToValueMap).length) {
     var varName = Object.keys(varNameToValueMap)[index];
     var varValue = varNameToValueMap[varName];
@@ -590,7 +562,7 @@ function mapValueToVarID3(varNameToValueMap, varNametoIDMap, valueToVarIDMap, in
       mapValueToVarID3(varNameToValueMap, varNametoIDMap, valueToVarIDMap, index+1, deviceid, variablesNotInCache, callback);
     } else {
       //create a new varid
-      variablesNotInCache.varName = varValue;
+      variablesNotInCache[varName] = varValue;
       mapValueToVarID3(varNameToValueMap, varNametoIDMap, valueToVarIDMap, index+1, deviceid, variablesNotInCache, callback);
     }
   } else {
@@ -598,33 +570,44 @@ function mapValueToVarID3(varNameToValueMap, varNametoIDMap, valueToVarIDMap, in
       callback(true, valueToVarIDMap);
       console.log("valueToVarIDMap = " + JSON.stringify(valueToVarIDMap, null, 2));
     } else {
-      handleVariablesNotInCache(deviceid, variablesNotInCache, function(ret, data) {
+      handleVariablesNotInCache(deviceid, variablesNotInCache, valueToVarIDMap, function(ret, data) {
         if (ret) {
-
+          callback(true, valueToVarIDMap);
+          console.log("valueToVarIDMap = " + JSON.stringify(valueToVarIDMap, null, 2));
         } else {
-
+          var msg = "error while handling var no in cache";
+          callback(false, msg);
         }
       });
     }
   }
 }
 
-function handleVariablesNotInCache(deviceid, variablesNotInCache, callback) {
+function handleVariablesNotInCache(deviceid, variablesNotInCache, valueToVarIDMap, callback) {
   getVariableNameFromDevice(deviceid, function(ret, data) {
     if (ret) {
       if (data != null) {
         var variablesToAddToCache = {};
         var variablesToCreate = {};
-        checkIfVariableExistInDevice(deviceid, variablesNotInCache, data, variablesToAddToCache, variablesToCreate, 0, function(ret, data) {
+        console.log("varNamefromDevice = "  + JSON.stringify(data, null, 2));
+        checkIfVariablesExistInDevice(deviceid, variablesNotInCache, data, variablesToAddToCache, variablesToCreate, valueToVarIDMap, 0, function(ret, variablesToAddToCache, variablesToCreate, valueToVarIDMap) {
           if (ret) {
             if (Object.keys(variablesToAddToCache).length > 0) {
-              addMultipleVarToCache(variablesToAddToCache, function(ret1, data1) {
-
+              addMultipleVarToCache(variablesToAddToCache, deviceid, 0, function(ret1, data1) {
+                if (ret1) {
+                  callback(true, valueToVarIDMap);
+                } else {
+                  callback(false);
+                }
               });
             }
             if (Object.keys(variablesToCreate).length > 0) {
               createNewVariablesFromName(variablesToCreate, deviceid, valueToVarIDMap, 0, function(ret2, data2) {
-
+                if (ret2) {
+                  callback(true, valueToVarIDMap);
+                } else {
+                  callback(false);
+                }
               });
             }
           }
@@ -644,19 +627,25 @@ function handleVariablesNotInCache(deviceid, variablesNotInCache, callback) {
   });
 }
 
-function checkIfVariablesExistInDevice(deviceid, variablesNotInCache, varIDtoNameMap, variablesToAddToCache, variablesToCreate, index, callback) {
+function checkIfVariablesExistInDevice(deviceid, variablesNotInCache, varIDtoNameMap, variablesToAddToCache, variablesToCreate, valueToVarIDMap, index, callback) {
   if (index < Object.keys(variablesNotInCache).length) {
     var varName = Object.keys(variablesNotInCache)[index];
     var variableValue = variablesNotInCache[varName];
-    if (varIDtoNameMap.indexOf(varName) > -1) {   // variable exist already in Device but wasn't in the cache
-      variablesToAddToCache.varName = variableValue;
-      checkIfVariablesExistInDevice(deviceid, variablesNotInCache, varIDtoNameMap, variablesToAddToCache, variablesToCreate, index+1, callback);
+    console.log("varIDtoNameMap = "  + JSON.stringify(varIDtoNameMap, null, 2));
+    if (varIDtoNameMap[varName]) {   // variable exist already in Device but wasn't in the cache
+      var varid = varIDtoNameMap[varName] ;
+      variablesToAddToCache[varName] = varid;
+      var item = {};
+      item.VariableID = varid;
+      item.Value = variableValue;
+      valueToVarIDMap.push(item);
+      checkIfVariablesExistInDevice(deviceid, variablesNotInCache, varIDtoNameMap, variablesToAddToCache, variablesToCreate, valueToVarIDMap, index+1, callback);
     } else {
-      variablesToCreate.varName = variableValue;
-      checkIfVariablesExistInDevice(deviceid, variablesNotInCache, varIDtoNameMap, variablesToAddToCache, variablesToCreate, index+1, callback);
+      variablesToCreate[varName] = variableValue;
+      checkIfVariablesExistInDevice(deviceid, variablesNotInCache, varIDtoNameMap, variablesToAddToCache, variablesToCreate, valueToVarIDMap, index+1, callback);
     }
   } else {
-    callback(true, variablesToAddToCache, variablesToCreate);
+    callback(true, variablesToAddToCache, variablesToCreate, valueToVarIDMap);
   }
 }
 
@@ -668,10 +657,10 @@ function getVariableNameFromDevice(deviceid, callback) {
       if (variableidList || variableidList.length == 0) {
         batchGetItem(variableidList, getItems, function(ret1, data1){
           if (ret1) {
-            var varIDtoNameMap = data1.Responses["Hx.Variable"];
-            console.log("data1 = " + JSON.stringify(data1, null, 2));
+            var varIDtoNameMap = data1.Responses[shareUtil.tables.variable];
+            //console.log("data1 = " + JSON.stringify(data1, null, 2));
             var dataObj = {};
-            convertDataArrToObj(data.Data, dataObj, 0, function(ret2, data2) {
+            convertDataArrToObj2(varIDtoNameMap, dataObj, 0, function(ret2, data2) {
               if (ret2) {
                 callback(true, dataObj);
               } else {
@@ -692,20 +681,76 @@ function getVariableNameFromDevice(deviceid, callback) {
   });
 }
 
+function addMultipleVarToCache(variablesToAddToCache, deviceid, index, callback) {
+  if (index < Object.keys(variablesToAddToCache).length) {
+    var varName = Object.keys(variablesToAddToCache)[index];
+    var varid = variablesToAddToCache[varName];
+    dbCache.get(deviceid, function(err, value) {
+      if (err) {
+        console.log('get error', err);
+      } else {
+        var cacheObj = JSON.parse(value);
+        cacheObj[varName] = varid;
+        var cacheString = JSON.stringify(cacheObj, null, 2);
+        dbCache.put(deviceid, cacheString, function(err) {
+          if (err) {
+            console.log('put error', err);
+            callback(false);
+          } else {
+            //callback(true);
+            addMultipleVarToCache(variablesToAddToCache, deviceid, index+1, callback)
+          }
+        });
+      }
+    });
+  } else {
+    callback(true);
+  }
+}
+
 function createNewVariablesFromName(variablesToCreate, deviceid, valueToVarIDMap, index, callback) {
+  console.log("variablesToCreate = " + JSON.stringify(variablesToCreate));
   if (index < Object.keys(variablesToCreate).length) {
     var varName = Object.keys(variablesToCreate)[index];
+    var varValue = variablesToCreate[varName];
     var uuidv1 = require('uuid/v1');
     var variableID = uuidv1();
     createNewVariableFromName(varName, variableID, deviceid, function(ret, data){
+      var item = {};
       item.VariableID = variableID;
-      //console.log(item.VariableID);
       item.Value = varValue;
       valueToVarIDMap.push(item);
-      createNewVariablesFromName(variablesToCreate, deviceid, valueToVarIDMap, index+1, callback);
+      addVarToCache(deviceid, varName, variableID, function(ret1) {
+        if (ret1) {
+          createNewVariablesFromName(variablesToCreate, deviceid, valueToVarIDMap, index+1, callback);
+        } else {
+          callback(false);
+        }
+      });
+    });
   } else {
     callback(true, valueToVarIDMap);
   }
+}
+
+function addVarToCache(deviceid, variableName, variableID, callback){
+  dbCache.get(deviceid, function(err, value) {
+    if (err) {
+      console.log('get error', err);
+    } else {
+      var cacheObj = JSON.parse(value);
+      cacheObj[variableName] = variableID;
+      var cacheString = JSON.stringify(cacheObj, null, 2);
+      dbCache.put(deviceid, cacheString, function(err) {
+        if (err) {
+          console.log('put error', err);
+          callback(false);
+        } else {
+          callback(true);
+        }
+      });
+    }
+  });
 }
 
 function createNewVariableFromName(varName, varID, deviceid, callback) {
@@ -760,17 +805,28 @@ function converVarNametoVarIDtArrayIntoObj(varIDtoNameMap, varObj, index, callba
 }
 
 function convertDataArrToObj(dataArray, dataObj, index, callback) {
-
   if (index < dataArray.length) {
-    //var dataSorted = {};
-    var key = Object.keys(dataArray[index]);
-    var value2 = Object.values(dataArray[index]);
-    dataObj[key] = value2[0];
-    ////console.log("dataSorted = " + JSON.stringify(dataObj, null, 2));
-    convertDataArrToObj(dataArray, dataObj, index + 1, callback);
+    var varName = Object.keys(dataArray[index]);
+    var varid = Object.values(dataArray[index])[0];
+    dataObj[varName] = varid;
+    convertDataArrToObj(dataArray, dataObj, index+1, callback)
   } else {
     callback(true, dataObj);
-  //  //console.log(" dataObj = " +  JSON.stringify(dataObj, null, 2));
+    //console.log("dataObj = " + JSON.stringify(dataObj, null, 2));
+  }
+}
+
+function convertDataArrToObj2(dataArray, dataObj, index, callback) {
+  //console.log("dataArray = " + JSON.stringify(dataArray, null, 2));
+  //console.log("dataArray.length = " + dataArray.length);
+  if (index < dataArray.length) {
+    var key = Object.keys(dataArray[index]);
+    var value2 = Object.values(dataArray[index]);
+    dataObj[value2[1]] = value2[0];
+    convertDataArrToObj2(dataArray, dataObj, index + 1, callback);
+  } else {
+    callback(true, dataObj);
+    //console.log(" dataObj = " +  JSON.stringify(dataObj, null, 2));
   }
 }
 
