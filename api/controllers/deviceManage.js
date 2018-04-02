@@ -1,8 +1,8 @@
 //'use strict';
 
 var shareUtil = require('./shareUtil.js');
-var asset = require('./asset.js');
 var userManage = require('./userManage.js')
+var asset = require('./asset.js');
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
 
@@ -887,91 +887,74 @@ function deleteDeviceOld(req, res) {
 }
 
 function deleteDevice(req, res) {
-
   var deviceid = req.swagger.params.DeviceID.value;
   var userid = req.swagger.params.UserID.value;
   var assetid = req.swagger.params.AssetID.value;
+  var apiKey = req.headers["x-api-key"];    // apiKey used to remove device from User cache
 
   userManage.getDevicesFromUser(userid, function(ret, data) {
-    if (ret)
-    {
+    if (ret) {
       var devices = data.Devices;
       var deviceIndex = devices.indexOf(deviceid);
-      //console.log("devices = " + devices);
-      //console.log("deviceIndex = " + deviceIndex);
-
-      if(devices.length > 0)
-      {
-        if(deviceIndex > -1)
-        {
+      if(devices.length > 0) {
+        if(deviceIndex > -1) {
           // DeviceID is in User
-          removeDeviceFromUser(userid, deviceIndex, function(ret1, data1){
-            if (ret1)
-            {
+          removeDeviceFromUser(userid, deviceIndex, function(ret1, data1) {
+            if (ret1) {
               deleteDeviceVariables(deviceid, function(ret2, data2) {
-                if (ret2)
-                {
-                  if (assetid)
-                  {
+                if (ret2) {
+                  if (assetid) {
                     removeDeviceFromAssetInternal(deviceid, assetid, function(ret3, data3) {
-                      if (ret3)
-                      {
-                        deleteDeviceByID(deviceid, function(ret4, data4) {
-                          if (ret4){
+                      if (ret3) {
+                        deleteDeviceByID(deviceid, apiKey, function(ret4, data4) {
+                          if (ret4) {
                             shareUtil.SendSuccess(res);
                           } else {
                             shareUtil.SendNotFound(res, data4);
                           }
                         });
-                      } else
-                      {
+                      } else {
                         var msg = "DeviceID not found in Asset";
                         shareUtil.SendNotFound(res, data3);
                       }
                     });
-                  } else
-                  {
+                  } else {
                     // no AssetID provided
-                    deleteDeviceByID(deviceid, function(ret4, data4) {
-                      if (ret4){
+                    deleteDeviceByID(deviceid, apiKey, function(ret4, data4) {
+                      if (ret4) {
                         shareUtil.SendSuccess(res);
                       } else {
                         shareUtil.SendNotFound(res, data4);
                       }
                     });
                   }
-                } else
-                {
+                } else {
                   // deleteVariables failed
                   var msg = "Error " + JSON.stringify(data2, null, 2);
                   shareUtil.SendNotFound(res, msg);
                 }
               });
-            } else
-            {
+            } else {
               // remove device from User failed
               shareUtil.SendNotFound(res, data1);
             }
           });
-        } else
-        {
+        } else {
           var msg = "Device Not Found in User";
           shareUtil.SendNotFound(res, msg);
         }
-      } else
-      {
+      } else {
         var msg = "No Devices found in User";
         shareUtil.SendNotFound(res, msg);
       }
-    } else
-    {
+    } else {
       var msg = "UserID does not exist or User does not contain any Variable";
       shareUtil.SendNotFound(res, data);
     }
   });
 }
 
-function deleteDeviceByID(deviceid, callback) {
+function deleteDeviceByID(deviceid, apiKey, callback) {
 
   var deleteParams = {
     TableName : shareUtil.tables.device,
@@ -979,22 +962,45 @@ function deleteDeviceByID(deviceid, callback) {
   };
   shareUtil.awsclient.delete(deleteParams, onDelete);
   function onDelete (err, data) {
-    if (err)
-    {
+    if (err) {
       var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       callback(false, msg);
-    } else
-    {
-      callback(true, null);
+    } else {
+      deleteDevicefromUserCache(deviceid, apiKey, function(ret, data) {
+        if (ret) {
+          callback(true, null);
+        }
+      });
     }
   }
 }
 
-function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
+function deleteDevicefromUserCache(deviceid, apiKey, callback) {
+  dbCache.get(apiKey,function(err, value) {
+    if (err) {
+      console.log('get error', err);  // user's ApiKey not in cache
+      callback(true);
+    } else {
+      console.log("cacheObj = " + value);
+      var cacheObj = JSON.parse(value);
+      var indexDevtoDelete = Object.values(cacheObj).indexOf(deviceid);
+      var VarNametoDelete = Object.keys(cacheObj)[indexDevtoDelete];
+      delete cacheObj[VarNametoDelete];
+      var cacheString = JSON.stringify(cacheObj, null, 2);
+      console.log("cacheString = " + cacheString);
+      dbCache.put(apiKey, cacheString, function(err) {
+        if (err) {
+          console.log('put error', err);
+        }
+        callback(true);
+      });
+    }
+  });
+}
 
+function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
   asset.getDevicesFromAsset(assetid, function(ret, data) {
-    if (ret)
-    {
+    if (ret) {
       var deviceIndex = data.Devices.indexOf(deviceid);
       var updateExpr = "remove Devices[" + deviceIndex + "]";
 
@@ -1004,20 +1010,16 @@ function removeDeviceFromAssetInternal(deviceid, assetid, callback) {
         UpdateExpression : updateExpr
       };
       shareUtil.awsclient.update(updateAsset, onUpdate);
-      function onUpdate(err, data)
-      {
-        if (err)
-        {
+      function onUpdate(err, data) {
+        if (err) {
           var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
           callback(false, msg);
-        } else
-        {
+        } else {
           //console.log("devices deleted from Asset list of Devices!");
           callback(true, null);
         }
       }
-    } else
-    {
+    } else {
       var msg = "Error:" + JSON.stringify(data, null, 2);
       callback(false, msg);
     }
@@ -1048,7 +1050,7 @@ function getVariablesFromDevice(deviceid, callback){
       }
       else
       {
-        //console.log("data.Items[0] = " + JSON.stringify(data, null, 2));
+        //  console.log("data.Items[0] = " + JSON.stringify(data, null, 2));
         callback(true, data.Items[0]);
       }
     }

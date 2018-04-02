@@ -151,7 +151,7 @@ function addVariableInternal(variableobj, deviceid, res) {
               updateVariableIDInDevice(variableID, deviceid, function(ret1, data) {
                 if (ret1) {
                   updateDeviceCache(deviceid, variableID, variableobj.VariableName, function(err) {
-                    if (err) {
+                    if (!err) {
                       var msg = "cache of Device not updated"
                       console.log(msg);
                       shareUtil.SendInternalErr(res, msg);
@@ -185,29 +185,34 @@ function isVariableNameUniqueInDevice(variableName, deviceid, callback) {
   deviceManage.getVariablesFromDevice(deviceid, function(ret, data) {
     if (ret) {
       var variables = data.Variables;
-      console.log("variables = " + variables.length);
-      if (variables && variables.length != 0) {
-        getVariableNameList(variables, 0, function(ret1, data1) {
-          if (ret1) {
-            var variableNameList = data1.Responses["Hx.Variable"];
-            //console.log("variableNameList" + JSON.stringify(variableNameList, null, 2));
-            var arrayList = [];
-            convertJSONListToArray(variableNameList, arrayList, 0, function(ret2, data2) {
-              if (ret) {
-                deviceManage.isItemInList(variableName, data2, function(ret2, data2) { //return true if item is NOT in the list
-                  if (ret2) {
-                    callback(true, null);
-                  } else {
-                    var msg = "VariableName not unique in Device";
-                    callback(false, msg)
-                  }
-                });
-              }
-            });
-          } else {
-            callback(false, data1);
-          }
-        });
+      //console.log("variables = " + variables.length);
+      if (variables) {
+        if (variables.length != 0) {
+          getVariableNameList(variables, 0, function(ret1, data1) {
+            if (ret1) {
+              var variableNameList = data1.Responses[shareUtil.tables.variable];
+              //console.log("variableNameList" + JSON.stringify(variableNameList, null, 2));
+              var arrayList = [];
+              convertJSONListToArray(variableNameList, arrayList, 0, function(ret2, data2) {
+                if (ret) {
+                  deviceManage.isItemInList(variableName, data2, function(ret2, data2) { //return true if item is NOT in the list
+                    if (ret2) {
+                      callback(true, null);
+                    } else {
+                      var msg = "VariableName not unique in Device";
+                      callback(false, msg)
+                    }
+                  });
+                }
+              });
+            } else {
+              callback(false, data1);
+            }
+          });
+        } else {
+          // no variable in device
+          callback(true, null);
+        }
       } else {
         // no variable in device
         callback(true, null);
@@ -589,50 +594,37 @@ function findVariableIndexInDevice(deviceID, variableID, callback){
     ProjectionExpression : "Variables"
   };
   shareUtil.awsclient.query(devicesParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
+  function onQuery(err, data) {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       shareUtil.SendInternalErr(res, msg);
-    } else
-    {
-      if (data.Count == 0)
-      {
-        var errmsg = {message: "DeviceID does not exist or Device does not contain any Variable"};
-      //  res.status(400).send(errmsg);
+    } else {
+      if (data.Count == 0) {
+        var msg = "DeviceID does not exist or Device does not contain any Variable";
         callback(false, msg);
-      }
-      else
-      {
+      } else {
         // find index of device in devices list coming from the result of the query in the Asset table
         var variables = data.Items[0].Variables;
         var variableIndex;
         var index = 0;
-        if ( typeof variables == "undefined")
-        {
+        console.log("variables = " + variables);
+        if (typeof variables == "undefined") {
           //console.log("undefined");
-          var errmsg = {message: "DeviceID does not exist or Device does not contain any Variable"};
-          //res.status(400).send(errmsg);
+          var msg = "DeviceID does contain any Variable";
           callback(false, msg);
-        }
-        else
-        {
-          while (index < variables.length)
-          {
+        } else {
+          while (index < variables.length) {
             //console.log("variables.Items[0]: " + variables[index]);
-            if (variables[index] == variableID)
-            {
+            if (variables[index] == variableID) {
               variableIndex = index;
               index  = variables.length;
-            } else
-            {
+            } else {
               index +=1;
             }
           }
         }
       }
-      if (index > 0){
+      if (index > 0) {
         deleteVarFromDeviceList(variableIndex, deviceID, function(ret2, msg){
           if (ret2){
             deleteVariableFromDeviceCache(deviceID, variableID, function(ret3) {
@@ -643,8 +635,7 @@ function findVariableIndexInDevice(deviceID, variableID, callback){
                 callback(false, msg);
               }
             })
-          } else
-          {
+          } else {
             callback(false, msg);
           }
         });
@@ -682,13 +673,14 @@ function deleteVarFromDeviceList(variableIndex, deviceID, callback) {
 
 function deleteVariableFromDeviceCache(deviceid, variableid, callback) {
   dbCache.get(deviceid, function(err, value) {
-    if (err) {
+    if (err) {    // device was not in the cache
       console.log('get error', err);
+      callback(true);
     } else {
       var cacheObj = JSON.parse(value);
       console.log("cacheObj = " + JSON.stringify(cacheObj, null, 2));
       var indexVarNameToDelete = Object.values(cacheObj).indexOf(variableid);
-      var varNameToDelete = Object.keys(cacheObj)[indexVarNameToDelete]
+      var varNameToDelete = Object.keys(cacheObj)[indexVarNameToDelete];
       delete cacheObj[varNameToDelete];
       var cacheString = JSON.stringify(cacheObj, null, 2);
       console.log("cacheString = " + cacheString);

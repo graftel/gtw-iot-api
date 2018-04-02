@@ -135,6 +135,7 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
   });
 }
 
+
 function addDataBySerialNumber(req, res) {
   var serialNumber = req.swagger.params.SerialNumber.value;
   var timestamp = req.body.Timestamp;
@@ -143,7 +144,7 @@ function addDataBySerialNumber(req, res) {
   if (Data.Data.length != 0){
     deviceManage.getDeviceIdBySerialNumber(serialNumber, function(ret, data) {
       var deviceid = data;
-      ////console.log("deviceid = " + JSON.stringify(deviceid, null, 2));
+      //console.log("deviceid = " + JSON.stringify(deviceid, null, 2));
       addDataByDeviceIDInternal(deviceid, Data, timestamp, function(ret, data) {
         if (ret) {
           shareUtil.SendSuccess(res);
@@ -159,7 +160,8 @@ function addDataBySerialNumber(req, res) {
   }
 }
 
-function addDataByDeviceName(req, res) {
+// no use of cache to get device name
+function addDataByDeviceNameOld(req, res) {
   var deviceName = req.swagger.params.DeviceName.value;
   var apiKey = req.headers["x-api-key"];
   var Data = req.body.Data;
@@ -177,7 +179,7 @@ function addDataByDeviceName(req, res) {
               if (ret2) {
                 var deviceid = data2[deviceName];
                 if (deviceid) {
-                  addDataByDeviceIDInternal(deviceid, Data, timestamp, function(ret, data) {
+                  addDataByDeviceIDInternal2(deviceid, Data, timestamp, function(ret, data) {
                     if (ret) {
                       shareUtil.SendSuccess(res);
                     } else {
@@ -205,6 +207,154 @@ function addDataByDeviceName(req, res) {
     var msg = "No data provided";
     shareUtil.SendInvalidInput(res, msg);
   }
+}
+
+// use of cache to get the device name
+function addDataByDeviceName(req, res) {
+  var deviceName = req.swagger.params.DeviceName.value;
+  var apiKey = req.headers["x-api-key"];
+  var Data = req.body.Data;
+  var timestamp = req.body.Timestamp;
+
+  if (Data.Data.length != 0) {
+    if (apiKey) {
+      dbCache.get(apiKey, function(err, value) {
+        if (err) {
+          console.log('get error', err);
+          userManage.getUserbyApiKeyQuery(apiKey, function (ret, data) {
+            if (ret) {
+              var devices = data.Items[0].Devices;
+              deviceManage.getDevicesDisplayName(devices, function(ret1, data1) {
+                if (ret1) {
+                  var devIDtoNameMap = data1.Responses[shareUtil.tables.device];
+                  var devObj = {};
+                  convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, 0, function(ret2, data2) {
+                    if (ret2) {
+                      var deviceid = data2[deviceName];
+                      var cacheObj = {};
+                      cacheObj[deviceName] = deviceid;
+                      var cacheString = JSON.stringify(cacheObj, null, 2);
+                      dbCache.put(apiKey, cacheString, function(err) {
+                        if (err) {
+                          console.log('put error', err);
+                        } else {
+                          if (deviceid) {
+                            addDataByDeviceIDInternal2(deviceid, Data, timestamp, function(ret, data) {
+                              if (ret) {
+                                shareUtil.SendSuccess(res);
+                              } else {
+                                var msg = "Error: " + JSON.stringify(data, null, 2);
+                                shareUtil.SendInternalErr(res, msg);
+                              }
+                            });
+                          } else {
+                            var msg = "No device found with this Device name";
+                            shareUtil.SendInvalidInput(res, msg);
+                          }
+                        }
+                      });
+                    } else {
+                      shareUtil.SendInvalidInput(res);
+                    }
+                  });
+                } else {
+                  shareUtil.SendInvalidInput(res, data);
+                }
+              });
+            } else {
+              shareUtil.SendInvalidInput(res, data);
+            }
+          });
+        } else {    // user api key in cache
+          getDeviceIDfromUserCache(apiKey, value, function(ret, deviceid) {
+            if (ret) {
+              addDataByDeviceIDInternal2(deviceid, Data, timestamp, function(ret, data) {
+                if (ret) {
+                  shareUtil.SendSuccess(res);
+                } else {
+                  var msg = "Error: " + JSON.stringify(data, null, 2);
+                  shareUtil.SendInternalErr(res, msg);
+                }
+              });
+            } else {     // DeviceID not in the cache
+              addDeviceNametoCache(apiKey, deviceName, value, function(ret, deviceid) {
+                if (ret) {
+                  addDataByDeviceIDInternal2(deviceid, Data, timestamp, function(ret, data) {
+                    if (ret) {
+                      shareUtil.SendSuccess(res);
+                    } else {
+                      var msg = "Error: " + JSON.stringify(data, null, 2);
+                      shareUtil.SendInternalErr(res, msg);
+                    }
+                  });
+                } else {
+                  var msg = "Error while adding deviceName to cache";
+                  shareUtil.SendInvalidInput(res, deviceid);
+                }
+              });
+            }
+          });
+        }
+      });
+    } else {
+      var msg = "ApiKey missing from header";
+      shareUtil.SendInvalidInput(res, msg);
+    }
+  } else {
+    var msg = "No data provided";
+    shareUtil.SendInvalidInput(res, msg);
+  }
+}
+
+function getDeviceIDfromUserCache(deviceName, value, callback) {
+  console.log("cacheObj in getDeviceIDfromUserCache = " + value);
+  var cacheObj = JSON.parse(value);
+  if (cacheObj[deviceName]) {
+    var deviceid = cacheObj[deviceName];
+    callback(true, deviceid);
+  } else {      // APi key in the cache but deviceName not in cache value corresponding to this APi key
+    callback(false);
+  }
+}
+
+function addDeviceNametoCache(apiKey, deviceName, value, callback) {
+  userManage.getUserbyApiKeyQuery(apiKey, function (ret, data) {
+    if (ret) {
+      var devices = data.Items[0].Devices;
+      deviceManage.getDevicesDisplayName(devices, function(ret1, data1) {
+        if (ret1) {
+          var devIDtoNameMap = data1.Responses[shareUtil.tables.device];
+          var devObj = {};
+          convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, 0, function(ret2, data2) {
+            if (ret2) {
+              if (data2[deviceName]) {  // check to make sure deviceid is actually in this user
+                var deviceid = data2[deviceName];
+                var cacheObj = JSON.parse(value);
+                cacheObj[deviceName] = deviceid;
+                var cacheString = JSON.stringify(cacheObj, null, 2);
+                dbCache.put(apiKey, cacheString, function(err) {
+                  if (err) {
+                    console.log('put error', err);
+                  } else {
+                    callback(true, deviceid);
+                  }
+                });
+              } else {
+                var msg = "DeviceID not found in User";
+                callback(false, msg);
+              }
+            } else {
+              callback(false);
+            }
+          });
+        } else {
+          callback(false);
+        }
+      });
+    } else {
+      callback(false);
+    }
+  });
 }
 
 function convertDevIDtoDevNameArrayIntoObj(devIDtoNameMap, devObj, index, callback) {
@@ -327,7 +477,7 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
   if (!timestamp) {
     timestamp = Math.floor((new Date).getTime()/1000);
   }
-  if(deviceid){
+  if(deviceid) {
     dbCache.get(deviceid, function(err, value) {
       if (err) {
         console.log('get error', err);
@@ -654,23 +804,29 @@ function getVariableNameFromDevice(deviceid, callback) {
     if (ret) {
       var variableidList = data.Variables;
       var getItems = [];
-      if (variableidList || variableidList.length == 0) {
-        batchGetItem(variableidList, getItems, function(ret1, data1){
-          if (ret1) {
-            var varIDtoNameMap = data1.Responses[shareUtil.tables.variable];
-            //console.log("data1 = " + JSON.stringify(data1, null, 2));
-            var dataObj = {};
-            convertDataArrToObj2(varIDtoNameMap, dataObj, 0, function(ret2, data2) {
-              if (ret2) {
-                callback(true, dataObj);
-              } else {
-                callback(false);
-              }
-            });
-          } else {
-            callback(false);
-          }
-        });
+      console.log("variableidList = " + variableidList);
+      if (variableidList) {
+        if (variableidList.length != 0) {
+          batchGetItem(variableidList, getItems, function(ret1, data1){
+            if (ret1) {
+              var varIDtoNameMap = data1.Responses[shareUtil.tables.variable];
+              //console.log("data1 = " + JSON.stringify(data1, null, 2));
+              var dataObj = {};
+              convertDataArrToObj2(varIDtoNameMap, dataObj, 0, function(ret2, data2) {
+                if (ret2) {
+                  callback(true, dataObj);
+                } else {
+                  callback(false);
+                }
+              });
+            } else {
+              callback(false);
+            }
+          });
+        } else {
+          console.log("variableidList empty");
+          callback(true, null);
+        }
       } else {
         console.log("variableidList empty");
         callback(true, null);
@@ -737,19 +893,20 @@ function addVarToCache(deviceid, variableName, variableID, callback){
   dbCache.get(deviceid, function(err, value) {
     if (err) {
       console.log('get error', err);
+      var cacheObj = {};
     } else {
       var cacheObj = JSON.parse(value);
-      cacheObj[variableName] = variableID;
-      var cacheString = JSON.stringify(cacheObj, null, 2);
-      dbCache.put(deviceid, cacheString, function(err) {
-        if (err) {
-          console.log('put error', err);
-          callback(false);
-        } else {
-          callback(true);
-        }
-      });
     }
+    cacheObj[variableName] = variableID;
+    var cacheString = JSON.stringify(cacheObj, null, 2);
+    dbCache.put(deviceid, cacheString, function(err) {
+      if (err) {
+        console.log('put error', err);
+        callback(false);
+      } else {
+        callback(true);
+      }
+    });
   });
 }
 
