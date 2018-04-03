@@ -675,7 +675,7 @@ paths:
         description: User object thats need to be updated
         required: true
         schema:
-          $ref: '#/definitions/DeviceModel'
+          $ref: '#/definitions/UpdateDeviceModel'
       responses:
         200:
           description: Success
@@ -1159,6 +1159,15 @@ definitions:
       SerialNumber:
         type: string
       VerificationCode:
+        type: string
+  UpdateDeviceModel:
+    type: object
+    properties:
+      UserID:
+        type: string
+      DeviceID:
+        type: string
+      DisplayName:
         type: string
   AddDataModel:
     type: object

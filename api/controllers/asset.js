@@ -26,17 +26,33 @@ var deviceManage = require('./deviceManage.js');
   In the starter/skeleton project the 'get' operation on the '/hello' path has an operationId named 'hello'.  Here,
   we specify that in the exports of this module that 'hello' maps to the function named 'hello'
  */
-module.exports = {
+
+var functions = {
   getAssetByUser: getAssetByUser,
   getAssetAttributes: getAssetAttributes,
   createAsset: createAsset,
   updateAsset: updateAsset,
   deleteAsset: deleteAsset,
-  IsAssetExist: IsAssetExist,
+  isAssetExist: isAssetExist,
   deleteDeviceFromAsset: deleteDeviceFromAsset,
   deleteVariableFromAsset: deleteVariableFromAsset,
   getDevicesFromAsset: getDevicesFromAsset
 };
+
+for (var key in functions) {
+  module.exports[key] = functions[key];
+}
+/*module.exports = {
+  getAssetByUser: getAssetByUser,
+  getAssetAttributes: getAssetAttributes,
+  createAsset: createAsset,
+  updateAsset: updateAsset,
+  deleteAsset: deleteAsset,
+  isAssetExist: isAssetExist,
+  deleteDeviceFromAsset: deleteDeviceFromAsset,
+  deleteVariableFromAsset: deleteVariableFromAsset,
+  getDevicesFromAsset: getDevicesFromAsset
+};*/
 
 function getAssetByUser(req, res) {
 
@@ -67,15 +83,18 @@ function getAssetByUserID(userid, callback) {
         Items: [],
         Count: 0
       };
+      console.log(JSON.stringify(data, null, 2));
       if (data.Count == 0) {
-        shareUtil.SendSuccessWithData(res, sendData);
+        var msg = "UserID does not exist";
+        callback(false, msg);
       } else {
         var assets = data.Items[0].Assets;
-        if (typeof assets == "undefined") {
-          shareUtil.SendSuccessWithData(res, sendData);
+        if (typeof assets == "undefined" || assets.length == 0) {
+          callback(true, sendData);
         } else {
           var gottenAssets = [];
           batchGetAssetsAttributes(assets, gottenAssets, function(ret, assetsdata) {
+            console.log("assetsData = " + JSON.stringify(assetsdata, null, 2));
             sendData.Items = assetsdata.Responses[shareUtil.tables.assets];
             sendData.Count = assetsdata.Responses[shareUtil.tables.assets].length;
             callback(true, sendData);
@@ -195,22 +214,17 @@ function getAssetAttributes(req, res) {
   };
   shareUtil.awsclient.query(assetsParams, onScan);
   function onScan(err, data) {
-       if (err) {
-           var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-          shareUtil.SendInternalErr(res,msg);
-       } else {
-         if (data.Count == 0)
-         {
-            shareUtil.SendNotFound(res);
-         }
-         else {
-           shareUtil.SendSuccessWithData(res, data.Items[0]);
-         }
-
-       }
-   }
-  // this sends back a JSON response which is a single string
-
+    if (err) {
+      var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      if (data.Count == 0) {
+        shareUtil.SendNotFound(res);
+      } else {
+        shareUtil.SendSuccessWithData(res, data.Items[0]);
+      }
+    }
+  }
 }
 
 function createAsset(req, res) {
@@ -231,31 +245,39 @@ function createAsset(req, res) {
             } else {
               var assetID = uuidv1();
             }
-            var params = {
-              TableName : shareUtil.tables.assets,
-              Item : {
-                AssetID: assetID,
-                AddTimeStamp: Math.floor((new Date).getTime()/1000),
-                LatestTimeStamp: 0,
-                DeviceCount: 0
-              },
-              ConditionExpression : "attribute_not_exists(AssetID)"
-            };
-            params.Item = Object.assign(params.Item, assetobj);
-            delete params.Item['UserID'];
-            shareUtil.awsclient.put(params, function(err, data) {
-              if (err) {
-                var msg = "Error:" + JSON.stringify(err, null, 2);
-                shareUtil.SendInternalErr(res,msg);
-              } else {
-                userManage.updateUserAsset(assetobj.UserID, assetID, function(ret1, data){
-                  if (ret1){
-                    shareUtil.SendSuccess(res);
-                  } else {
-                    var msg = "Error:" + JSON.stringify(data);
+            isAssetExist(assetID, function(ret1, data1) {
+              if (!ret1 || data1 != null) {
+                console.log("asset does not exist already");
+                var params = {
+                  TableName : shareUtil.tables.assets,
+                  Item : {
+                    AssetID: assetID,
+                    AddTimeStamp: Math.floor((new Date).getTime()/1000),
+                    LatestTimeStamp: 0,
+                    DeviceCount: 0
+                  },
+                  ConditionExpression : "attribute_not_exists(AssetID)"
+                };
+                params.Item = Object.assign(params.Item, assetobj);
+                delete params.Item['UserID'];
+                shareUtil.awsclient.put(params, function(err, data) {
+                  if (err) {
+                    var msg = "Error:" + JSON.stringify(err, null, 2);
                     shareUtil.SendInternalErr(res,msg);
+                  } else {
+                    userManage.updateUserAsset(assetobj.UserID, assetID, function(ret1, data){
+                      if (ret1){
+                        shareUtil.SendSuccess(res);
+                      } else {
+                        var msg = "Error:" + JSON.stringify(data);
+                        shareUtil.SendInternalErr(res,msg);
+                      }
+                    });
                   }
                 });
+              } else {
+                var msg = "AssetID already exist";
+                shareUtil.SendInvalidInput(res, msg);
               }
             });
           } else {
@@ -278,110 +300,61 @@ function updateAsset(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
   var isValid = true;
-  if(assetobj.constructor === Object && Object.keys(assetobj).length === 0)
-  {
+  if(assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
     isValid  = false;
-  }
-  else
-  {
-    if(!assetobj.AssetID)
-    {
+  } else {
+    if (!assetobj.AssetID) {
       isValid  = false;
-    }
-    else
-    {
-      // check if asset exists
+    } else {
       var assetsParams = {
-         TableName : shareUtil.tables.assets,
-         ProjectionExpression: ["AssetID","AddTimeStamp","DisplayName","LastestTimeStamp","VerificationCode"],
-         FilterExpression : "AssetID = :v1",
-         ExpressionAttributeValues : {':v1' : assetobj.AssetID.toString()}
+        TableName : shareUtil.tables.assets,
+        KeyConditionExpression : "AssetID = :v1",
+        ExpressionAttributeValues : {':v1' : assetobj.AssetID}
       };
-      shareUtil.awsclient.scan(assetsParams, onScan);
-      function onScan(err, data) {
-        if (err)
-        {
+      shareUtil.awsclient.query(assetsParams, onQuery);
+      function onQuery(err, data) {
+        if (err) {
           var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-          console.error(msg);
-          var errmsg = {
-            message: msg
-          };
-          res.status(500).send(errmsg);
-        } else
-        {
-          if (data.Count == 0)
-          {
-            var errmsg = {
-              message: "Items not found"
-            };
-            res.status(404).send(errmsg);
-          }
-          else
-          {
+          shareUtil.SendInternalErr(res, msg);
+        } else {
+          if (data.Count == 0) {
+            shareUtil.SendInvalidInput(res);
+          } else {
+            console.log("data = " + JSON.stringify(data, null, 2));
             var addTimeStamp = data.Items[0].AddTimeStamp;
             var updateItems = "set ";
             var expressvalues = {};
-            if (assetobj.CompanyID)
-            {
-              updateItems = updateItems + "CompanyID = :v1,";
-              expressvalues[":v1"] = assetobj.CompanyID.toString();
+            if (assetobj.DisplayName) {
+              updateItems = updateItems + "DisplayName = :v1,";
+              expressvalues[":v1"] = assetobj.DisplayName.toString();
             }
-            if (assetobj.DisplayName)
-            {
-              updateItems = updateItems + "DisplayName = :v2,";
-              expressvalues[":v2"] = assetobj.DisplayName.toString();
+            if (assetobj.LatestTimeStamp) {
+              updateItems = updateItems + "LatestTimeStamp = :v2,";
+              expressvalues[":v2"] = assetobj.LatestTimeStamp;
             }
-            if (assetobj.LatestTimeStamp)
-            {
-              updateItems = updateItems + "LatestTimeStamp = :v3,";
-              expressvalues[":v3"] = assetobj.LatestTimeStamp;
-            }
-            if (assetobj.VerificationCode)
-            {
-              updateItems = updateItems + "VerificationCode = :v4,";
-              expressvalues[":v4"] = assetobj.VerificationCode.toString();
-            }
-
             updateItems = updateItems.slice(0, -1);
             var updateParams = {
-                  TableName : shareUtil.tables.assets,
-                  Key : {
-                    AssetID : assetobj.AssetID,
-                    AddTimeStamp : addTimeStamp
-                    },
-                  UpdateExpression : updateItems,
-                  ExpressionAttributeValues : expressvalues
+                TableName : shareUtil.tables.assets,
+                Key : { AssetID : assetobj.AssetID },
+                UpdateExpression : updateItems,
+                ExpressionAttributeValues : expressvalues
               };
-            //console.log(updateParams);
+            console.log(updateParams);
             shareUtil.awsclient.update(updateParams, function (err, data) {
-      				if (err)
-              {
+      				if (err) {
     				    var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
                 console.error(msg);
-                var errmsg = {
-                  message: msg
-                };
-                res.status(500).send(errmsg);
-      				} else
-              {
-              var msg = {
-                message: "Success"
-                };
-              //console.log("asset updated!");
-              res.status(200).send(msg);
+                shareUtil.SendInternalErr(res, msg);
+      				} else {
+                shareUtil.SendSuccess(res);
       				}
       			});
           }
         }
       }
     }
-    if (!isValid)
-    {
-      var errmsg = {
-        message: "Invalid Input"
-      };
-      //console.log(errmsg);
-      res.status(400).send(errmsg);
+    if (!isValid) {
+      shareUtil.SendInvalidInput(res);
     }
   }
 }
@@ -463,7 +436,7 @@ function deleteDeviceFromAsset(req, res) {
   }
 }
 
-function getDevicesFromAsset(assetid, callback){
+function getDevicesFromAsset(assetid, callback) {
 
   var assetsParams = {
     TableName : shareUtil.tables.assets,
@@ -472,23 +445,17 @@ function getDevicesFromAsset(assetid, callback){
     ProjectionExpression : "Devices"
   };
   shareUtil.awsclient.query(assetsParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
-    var msg = "Error:" + JSON.stringify(err, null, 2);
-    callback(false, msg);
-  } else
-    {
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else {
       ////console.log(JSON.stringify(assetsParams, null ,2));
-      if (data.Count == 0)
-      {
+      if (data.Count == 0) {
         var msg = "AssetID does not exist or Asset does not contain any Device";
         callback(false, msg);
-      }
-      else
-      {
-        ////console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
+      } else {
+        console.log("data.Items[0] = " + JSON.stringify(data.Items[0], null, 2));
         callback(true, data.Items[0]);
       }
     }
@@ -673,33 +640,26 @@ function removeAssetFromUser(userid, assetIndex, callback) {
   }
 }
 
-function IsAssetExist(assetID, callback) {
-
+function isAssetExist(assetID, callback) {
   var assetsParams = {
-     TableName : shareUtil.tables.assets,
-     FilterExpression : "AssetID = :v1",
-     ExpressionAttributeValues : {':v1' : assetID.toString()}
+    TableName : shareUtil.tables.assets,
+    KeyConditionExpression : "AssetID = :v1",
+    ExpressionAttributeValues : {':v1' : assetID}
   };
-  shareUtil.awsclient.scan(assetsParams, onScan);
-  function onScan(err, data) {
-       if (err) {
-           var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
-           console.error(msg);
-           var errmsg = {
-             message: msg
-           };
-           res.status(500).send(errmsg);
-       } else {
-         if (data.Count == 0)
-         {
-           callback(false);
-         }
-         else {
-           callback(true);
-         }
-
-       }
-   }
+  shareUtil.awsclient.query(assetsParams, onQuery);
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Unable to scan the assets table.(getAssets) Error JSON:" + JSON.stringify(err, null, 2);
+      callback(false, msg);
+    } else {
+      console.log("data in isAssetExist = " + JSON.stringify(data, null, 2));
+      if (data.Count == 0) {
+        callback(false, null);
+      } else {
+        callback(true);
+      }
+    }
+  }
 }
 
 function updateSingleAssetKey(asset, assetid, key,  callback){

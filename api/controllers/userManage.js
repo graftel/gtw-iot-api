@@ -16,7 +16,8 @@ var dbTest = shareUtil.dbTest;
   In the starter/skeleton project the 'get' operation on the '/hello' path has an operationId named 'hello'.  Here,
   we specify that in the exports of this module that 'hello' maps to the function named 'hello'
  */
-module.exports = {
+
+var functions = {
   createUser: createUser,
   updateUser: updateUser,
   authenticate: authenticate,
@@ -32,34 +33,51 @@ module.exports = {
   getDevicesFromUser: getDevicesFromUser,
   getUserbyApiKey: getUserbyApiKey,
   getUserbyApiKeyQuery: getUserbyApiKeyQuery
-};
+}
+// use of this technique instead of traditionnal module.exports to avoid problem due to circular dependencies
+for (var key in functions) {
+  module.exports[key] = functions[key];
+}
+
+
+/*module.exports = {
+  createUser: createUser,
+  updateUser: updateUser,
+  authenticate: authenticate,
+  getSettings: getSettings,
+  updateSettings: updateSettings,
+  logIn: logIn,
+  activate: activate,
+  deleteUser: deleteUser,
+  resetUser: resetUser,
+  validateResetPasswordLink: validateResetPasswordLink,
+  updatePassword: updatePassword,
+  updateUserAsset: updateUserAsset,
+  getDevicesFromUser: getDevicesFromUser,
+  getUserbyApiKey: getUserbyApiKey,
+  getUserbyApiKeyQuery: getUserbyApiKeyQuery
+};*/
 
 function getDevicesFromUser(userid, callback) {
 
   var usersParams = {
     TableName : shareUtil.tables.users,
     KeyConditionExpression : "UserID = :V1",
-    ExpressionAttributeValues :  { ':V1' : userid},
+    ExpressionAttributeValues :  { ':V1' : userid },
     ProjectionExpression : "Devices"
   };
   shareUtil.awsclient.query(usersParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
+  function onQuery(err, data) {
+    if (err) {
     var msg = "Error in getDevicesFromUser:" + JSON.stringify(err, null, 2);
     callback(false, msg);
-    } else
-    {
-      console.log(JSON.stringify(data, null ,2));
+    } else {
+      //console.log(JSON.stringify(data, null ,2));
       //if (typeof data.Items[0].length == "undefined" )//|| data.Items[0].length == 0 )
-      if (data.Count == 0)
-      {
+      if (data.Count == 0) {
         var msg = "UserID does not exist or User does not contain any Device";
         callback(false, data.Items[0]);
-      }
-      else
-      {
+      } else {
         callback(true, data.Items[0]);
       }
     }
@@ -111,102 +129,80 @@ function createUser(req, res) {
 
 function resetUser(req, res) {
   var emailid = req.swagger.params.EmailAddress.value;
-  if(emailid)
-  {
-        IsEmailExist(emailid, function(ret1,data){
-          if (ret1) { // exists
-            // auto generate user id
-            var epochtime = Math.floor((new Date).getTime()/1000);
-            var uuidv1 = require('uuid/v1');
-            var crypto = require('crypto');
-            var updateItems = "set VerificationCodeExpire = :v0, VerificationCode = :v1, Active = :v2";
-            var expressvalues = {};
-            expressvalues[":v0"] = epochtime + 1800;
-            expressvalues[":v1"] = crypto.randomBytes(20).toString('hex');
-            expressvalues[":v2"] = 0;
-
-            var updateParams = {
-                  TableName : shareUtil.tables.users,
-                  Key : {
-                    UserID : data.Items[0].UserID,
-                },
-                UpdateExpression : updateItems,
-                ExpressionAttributeValues : expressvalues
-              };
-            shareUtil.awsclient.update(updateParams, function (err, data1) {
-                 if (err) {
-                     var msg = "Error:" +  JSON.stringify(err, null, 2);
-                     console.error(msg);
-                     shareUtil.SendInternalErr(res,'Internal Err');
-                 } else {
-                   //console.log("user reset!");
-                   var resetinfo = {
-                     VerificationCode: expressvalues[":v1"],
-                     UserID: data.Items[0].UserID
-                   };
-                   sendForgotPasswordEmail(emailid, expressvalues[":v1"]);
-                   shareUtil.SendSuccess(res,'Reset Succeed');
-                 }
-             });
-
+  if (emailid) {
+    IsEmailExist(emailid, function(ret1,data) {
+      if (ret1) { // exists
+        // auto generate user id
+        var epochtime = Math.floor((new Date).getTime()/1000);
+        var uuidv1 = require('uuid/v1');
+        var crypto = require('crypto');
+        var updateItems = "set VerificationCodeExpire = :v0, VerificationCode = :v1, Active = :v2";
+        var expressvalues = {};
+        expressvalues[":v0"] = epochtime + 1800;
+        expressvalues[":v1"] = crypto.randomBytes(20).toString('hex');
+        expressvalues[":v2"] = 0;
+        var updateParams = {
+          TableName : shareUtil.tables.users,
+          Key : { UserID : data.Items[0].UserID },
+          UpdateExpression : updateItems,
+          ExpressionAttributeValues : expressvalues
+        };
+        shareUtil.awsclient.update(updateParams, function (err, data1) {
+          if (err) {
+            var msg = "Error:" +  JSON.stringify(err, null, 2);
+            console.error(msg);
+            shareUtil.SendInternalErr(res,'Internal Err');
+          } else {
+            //console.log("user reset!");
+            /*var resetinfo = {
+              VerificationCode: expressvalues[":v1"],
+              UserID: data.Items[0].UserID
+            };*/
+            sendForgotPasswordEmail(emailid, expressvalues[":v1"]);
+            shareUtil.SendSuccess(res,'Reset Succeed');
           }
-          else {
-            //console.log("user not exist");
-            shareUtil.SendInvalidInput(res, 'User not exists');
-          }
-
         });
-  }
-  else {
+      } else {
+        //console.log("user not exist");
+        shareUtil.SendInvalidInput(res, 'User not exists');
+      }
+    });
+  } else {
     //console.log("is valid = false1");
-     shareUtil.SendInvalidInput(res);
+    shareUtil.SendInvalidInput(res);
   }
-
-
-  // this sends back a JSON response which is a single string
 }
 
 function updateUser(req, res) {
   var userobj = req.body;
   //console.log(userobj);
-  if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
+  if (userobj.constructor === Object && Object.keys(userobj).length === 0) {
     //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res);
-  }
-  else {
-    if(!userobj.EmailAddress)
-    {
+  } else {
+    if(!userobj.EmailAddress) {
       //console.log("is valid = false1");
        shareUtil.SendInvalidInput(res);
-    }
-    else {
-
-      IsEmailExist(userobj.EmailAddress, function(ret1,data){
+    } else {
+      IsEmailExist(userobj.EmailAddress, function(ret1,data) {
         if (ret1) { // exists
           var updateItems = "set ";
           var expressvalues = {};
 
           var i = 0
-          for (var key in userobj)
-          {
-            if (userobj.hasOwnProperty(key))
-            {
-              if (key != "EmailAddress")
-              {
+          for (var key in userobj) {
+            if (userobj.hasOwnProperty(key)) {
+              if (key != "EmailAddress") {
                 updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
                 expressvalues[":v" + i.toString()] = userobj[key];
                 i++;
               }
             }
           }
-
           updateItems = updateItems.slice(0, -1);
-
           var updateParams = {
                 TableName : shareUtil.tables.users,
-                Key : {
-                  UserID : data.Items[0].UserID,
-              },
+                Key : { UserID : data.Items[0].UserID },
               UpdateExpression : updateItems,
               ExpressionAttributeValues : expressvalues
             };
@@ -227,50 +223,38 @@ function updateUser(req, res) {
                  res.status(200).send(msg);
                }
            });
-        }
-        else {
+        } else {
           //console.log("exists");
           shareUtil.SendInvalidInput(res, 'User Not exists');
         }
-
       });
     }
   }
-
-
-  // this sends back a JSON response which is a single string
 }
 
 function updateUserAsset(userID, assetID, callback) {
-  if(!userID)
-  {
+  if(!userID) {
     callback(false, null);
-  }
-  else {
+  } else {
     var updateParams = {
-          TableName : shareUtil.tables.users,
-          Key : {
-            UserID : userID,
-                },
-        UpdateExpression : 'set #assets = list_append(if_not_exists(#assets, :empty_list), :id)',
-        ExpressionAttributeNames: {
-            '#assets': 'Assets'
-          },
-        ExpressionAttributeValues: {
-          ':id': [assetID],
-          ':empty_list': []
-        }
-
-      };
+      TableName : shareUtil.tables.users,
+      Key : { UserID : userID },
+      UpdateExpression : 'set #assets = list_append(if_not_exists(#assets, :empty_list), :id)',
+      ExpressionAttributeNames: { '#assets': 'Assets' },
+      ExpressionAttributeValues: {
+        ':id': [assetID],
+        ':empty_list': []
+      }
+    };
     shareUtil.awsclient.update(updateParams, function (err, data) {
-         if (err) {
-             var msg = "Error:" +  JSON.stringify(err, null, 2);
-             console.error(msg);
-             callback(false,msg);
-         } else {
-            callback(true,null);
-         }
-     });
+      if (err) {
+        var msg = "Error:" +  JSON.stringify(err, null, 2);
+        console.error(msg);
+        callback(false,msg);
+      } else {
+        callback(true,null);
+      }
+    });
   }
 }
 
@@ -300,10 +284,7 @@ function getSettings(req, res) {
           if (err) return console.log('erroooor', err);
             dbTest.get(devID, function(err, value) {
             if (err) return console.log('get error', err);
-              console.log('dataTest = ' + value);
               var obj = JSON.parse(value);
-              console.log("obj = " + JSON.stringify(obj, null, 2));
-              console.log("obj.data2 = " + obj.data2);
             });
           });
           shareUtil.SendSuccessWithData(res, data.Items[0]);
@@ -314,16 +295,12 @@ function getSettings(req, res) {
       }
     });
   }
-
-  // this sends back a JSON response which is a single string
 }
 
 function singleDeleteUser(userid, callback){
   var params = {
     TableName: shareUtil.tables.users,
-      Key : {
-        UserID : userid
-      }
+    Key : { UserID : userid }
   };
   //console.log(params)
   shareUtil.awsclient.delete(params, function(err, data) {
@@ -334,80 +311,56 @@ function singleDeleteUser(userid, callback){
 function deleteUser(req, res) {
   var userid = req.swagger.params.userID.value;
 
-  if (typeof userid == "undefined")
-  {
+  if (typeof userid == "undefined") {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
+  } else {
+    singleDeleteUser(userid, function(err,data) {
+      if (err) {
+        var msg = "Error:" + JSON.stringify(err, null, 2);
+        shareUtil.SendInternalErr(res,msg);
+      } else {
+        shareUtil.SendSuccess(res);
+      }
+    });
   }
-  else {
-      singleDeleteUser(userid, function(err,data){
-        if(err){
-          var msg = "Error:" + JSON.stringify(err, null, 2);
-          console.error(msg);
-          shareUtil.SendInternalErr(res,msg);
-        }
-        else{
-          shareUtil.SendSuccess(res);
-        }
-
-      });
-  }
-
-  // this sends back a JSON response which is a single string
 }
 
 function updateSettings(req, res) {
   var settingobj = req.body;
   //console.log(settingobj);
-  if(settingobj.constructor === Object && Object.keys(settingobj).length === 0) {
+  if (settingobj.constructor === Object && Object.keys(settingobj).length === 0) {
     //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-  }
-  else {
-
+  } else {
     var updateItems = "set ";
     var expressvalues = {};
-
     var i = 0
-    for (var key in settingobj.parameters)
-    {
-      if (settingobj.parameters.hasOwnProperty(key))
-      {
-        if (key != "DeviceID" && key != "Type")
-        {
-          updateItems = updateItems + "Settings.ParameterList." + key.toString() + " = :v" + i.toString() + ",";
-          expressvalues[":v" + i.toString()] = settingobj.parameters[key];
+    //console.log("settingobj = " + JSON.stringify(settingobj, null, 2));
+    for (var key in settingobj) {
+      if (settingobj.hasOwnProperty(key)) {
+        if (key != "UserID") { // && key != "Type") {
+          updateItems = updateItems + key.toString() + " = :v" + i.toString() + ",";
+          expressvalues[":v" + i.toString()] = settingobj[key];
           i++;
         }
       }
     }
-
     updateItems = updateItems.slice(0, -1);
-
     var updateParams = {
-          TableName : shareUtil.tables.users,
-          Key : {
-            UserID : settingobj.UserID,
-        },
-        UpdateExpression : updateItems,
-        ExpressionAttributeValues : expressvalues
+      TableName : shareUtil.tables.users,
+      Key : { UserID : settingobj.UserID },
+      UpdateExpression : updateItems,
+      ExpressionAttributeValues : expressvalues
       };
     //console.log(updateParams);
     shareUtil.awsclient.update(updateParams, function (err, data) {
-         if (err) {
-             var msg = "Error:" +  JSON.stringify(err, null, 2);
-             console.error(msg);
-             var errmsg = {
-               message: msg
-             };
-             res.status(500).send(errmsg);
-         } else {
-           var msg = {
-             message: "Success"
-           };
-           //console.log("user setting updated!");
-           res.status(200).send(msg);
-         }
-     });
+      if (err) {
+        var msg = "Error:" +  JSON.stringify(err, null, 2);
+        shareUtil.SendInternalErr(res, msg);
+      } else {
+        shareUtil.SendSuccess(res);
+      }
+    });
   }
 }
 
@@ -415,40 +368,34 @@ function updatePassword(req, res){
   var emailid = req.swagger.params.EmailAddress.value;
   var password = req.swagger.params.Password.value;
 
-  if (emailid && password){
-    IsEmailExist(emailid,function(ret1,data){
-      if(ret1){
-
+  if (emailid && password) {
+    IsEmailExist(emailid, function(ret1,data) {
+      if (ret1) {
         var updateItems = "set Password = :v0, Active = :v1";
         var expressvalues = {};
         expressvalues[":v0"] = password;
         expressvalues[":v1"] = 1;
-
         var updateParams = {
-              TableName : shareUtil.tables.users,
-              Key : {
-                UserID : data.Items[0].UserID,
-            },
-            UpdateExpression : updateItems,
-            ExpressionAttributeValues : expressvalues
+          TableName : shareUtil.tables.users,
+          Key : { UserID : data.Items[0].UserID },
+          UpdateExpression : updateItems,
+          ExpressionAttributeValues : expressvalues
           };
         shareUtil.awsclient.update(updateParams, function (err, data1) {
-             if (err) {
-                 var msg = "Error:" +  JSON.stringify(err, null, 2);
-                 console.error(msg);
-                 shareUtil.SendInternalErr(res,'Internal Err');
-             } else {
-               //console.log("user password updated!");
-               shareUtil.SendSuccess(res);
-             }
-         });
-      }
-      else{
+          if (err) {
+            var msg = "Error:" +  JSON.stringify(err, null, 2);
+            console.error(msg);
+            shareUtil.SendInternalErr(res,'Internal Err');
+          } else {
+            //console.log("user password updated!");
+            shareUtil.SendSuccess(res);
+          }
+        });
+      } else {
         shareUtil.SendInvalidInput(res, 'User not exists');
       }
     });
-  }
-  else {
+  } else {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
 }
@@ -457,29 +404,24 @@ function validateResetPasswordLink(req, res){
   var emailid = req.swagger.params.EmailAddress.value;
   var vercode = req.swagger.params.VerificationCode.value;
 
-  if (emailid && vercode){
-    IsEmailExist(emailid,function(ret1,data){
-      if(ret1){
-        if (vercode === data.Items[0].VerificationCode){
+  if (emailid && vercode) {
+    IsEmailExist(emailid,function(ret1,data) {
+      if (ret1) {
+        if (vercode === data.Items[0].VerificationCode) {
           var epochtime = Math.floor((new Date).getTime()/1000);
-          if (epochtime > data.Items[0].VerificationCodeExpire)
-          {
+          if (epochtime > data.Items[0].VerificationCodeExpire) {
             shareUtil.SendInvalidInput(res, 'Verification Code Expired');
-          }
-          else{
+          } else {
             shareUtil.SendSuccess(res);
           }
-        }
-        else{
+        } else {
           shareUtil.SendInvalidInput(res, 'Verification Code Not Match');
         }
-      }
-      else{
+      } else {
         shareUtil.SendInvalidInput(res, 'User not exists');
       }
     });
-  }
-  else {
+  } else {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   }
 }
@@ -487,72 +429,54 @@ function validateResetPasswordLink(req, res){
 function activate(req, res) {
   var userid = req.swagger.params.UserID.value;
   var actkey = req.swagger.params.ActivateKey.value;
-  if (typeof userid == "undefined" || typeof actkey == "undefined")
-  {
+  if (typeof userid == "undefined" || typeof actkey == "undefined") {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
-  }
-  else {
-
-        var params = {
-          TableName: shareUtil.tables.users,
-          KeyConditionExpression : "UserID = :v1",
-          ExpressionAttributeValues : {':v1' : userid.toString()}
-        };
-        shareUtil.awsclient.query(params, function(err, data) {
-        if (err) {
-          var msg = "Error:" + JSON.stringify(err, null, 2);
-          console.error(msg);
-          shareUtil.SendInternalErr(res,msg);
-        }else{
-          if (data.Count == 1) {
-            if (typeof data.Items[0].VerificationCode == "undefined")
-            {
+  } else {
+    var params = {
+      TableName: shareUtil.tables.users,
+      KeyConditionExpression : "UserID = :v1",
+      ExpressionAttributeValues : {':v1' : userid.toString()}
+    };
+    shareUtil.awsclient.query(params, function(err, data) {
+      if (err) {
+        var msg = "Error:" + JSON.stringify(err, null, 2);
+        shareUtil.SendInternalErr(res,msg);
+      } else {
+        if (data.Count == 1) {
+          if (typeof data.Items[0].VerificationCode == "undefined") {
               var msg = "Error: Cannot find data"
               shareUtil.SendInvalidInput(res,msg);
-            }
-            else {
-              if (actkey === data.Items[0].VerificationCode)
-              {
-                // check HashExpire
-                var epochtime = (new Date).getTime() / 1000;
-                if (data.Items[0].VerificationCodeExpire > epochtime){
-
-                  activateUser(userid, function(err){
-                    if (err){
-                        //console.log("cannot activate user");
-                    }
-                    else{
-                      //console.log("activate user succeed");
-                      shareUtil.SendSuccess(res, 'Activation Succeed');
-                    }
-                  });
-
-
-                }
-                else{
-                  var msg = "Register expired, please register again";
-                  // delete user here
-                  shareUtil.SendInvalidInput(res,msg);
-                }
-
-              }
-              else{
-                var msg = "Cannot verify VerificationCode";
+          } else {
+            if (actkey === data.Items[0].VerificationCode) {
+              // check HashExpire
+              var epochtime = (new Date).getTime() / 1000;
+              if (data.Items[0].VerificationCodeExpire > epochtime) {
+                activateUser(userid, function(err) {
+                  if (err) {
+                      //console.log("cannot activate user");
+                      shareUtil.SendInternalErr(res);
+                  } else {
+                    //console.log("activate user succeed");
+                    shareUtil.SendSuccess(res, 'Activation Succeed');
+                  }
+                });
+              } else {
+                var msg = "Register expired, please register again";
+                // delete user here
                 shareUtil.SendInvalidInput(res,msg);
               }
+            } else {
+              var msg = "Cannot verify VerificationCode";
+              shareUtil.SendInvalidInput(res,msg);
             }
-
           }
-          else {
-              var msg = "Error: Cannot find data"
-             shareUtil.SendInvalidInput(res,msg);
-          }
-
+        } else {
+          var msg = "Error: Cannot find data"
+          shareUtil.SendInvalidInput(res,msg);
         }
-      });
+      }
+    });
   }
-
-  // this sends back a JSON response which is a single string
 }
 
 function authenticateOld(apikey, callback) {
@@ -635,18 +559,15 @@ function logIn(req, res){
 
 function activateUser(userid, callback){
   var updateParams = {
-        TableName : shareUtil.tables.users,
-        Key : {
-          UserID : userid,
-      },
-      UpdateExpression : "set Active=:v0",
-      ExpressionAttributeValues : {":v0": 1}
-    };
+    TableName : shareUtil.tables.users,
+    Key : { UserID : userid },
+    UpdateExpression : "set Active=:v0",
+    ExpressionAttributeValues : {":v0": 1}
+  };
   //console.log(updateParams);
   shareUtil.awsclient.update(updateParams, function (err, data) {
       callback(err);
    });
-
 }
 
 function IsEmailExist(email, callback){
@@ -657,19 +578,16 @@ function IsEmailExist(email, callback){
  };
   shareUtil.awsclient.scan(Params, onScan);
   function onScan(err, data) {
-     if (err) {
-         var msg = "Error:" + JSON.stringify(err, null, 2);
-         shareUtil.SendInternalErr(res,msg);
-     } else {
-       if (data.Count == 0)
-       {
-         callback(false, data);
-       }
-       else {
-         callback(true, data);
-       }
-
-     }
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      if (data.Count == 0) {
+        callback(false, data);
+      } else {
+        callback(true, data);
+      }
+    }
   }
 }
 
@@ -695,7 +613,7 @@ function getUserbyApiKeyQuery(apiKey, callback) {
   }
   shareUtil.awsclient.query(params, onQuery);
   function onQuery(err, data) {
-    if (err){
+    if (err) {
       var msg = JSON.stringify(err, null, 2);
       callback(false, msg);
     } else {
@@ -711,7 +629,7 @@ function getUserbyApiKeyQuery(apiKey, callback) {
 
 function sendForgotPasswordEmail(emailid, VerificationCode) {
   const sgMail = require('@sendgrid/mail');
-  sgMail.setApiKey(require('../../sg.js').SENDGRID_API_KEY);
+  sgMail.setApiKey(require('../../../../sg.js').SENDGRID_API_KEY);
   var link =  "http://localhost:3000/reset-password?email=" + emailid + "&code=" + VerificationCode;
   const msg = {
     to: emailid,

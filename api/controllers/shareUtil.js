@@ -72,7 +72,7 @@ function SendInternalErr(res, msg = INTERNAL_ERR) {
   var errmsg = {
     message: msg
   };
-  //console.log(errmsg);
+  console.log(errmsg);
   res.status(500).send(errmsg);
 }
 

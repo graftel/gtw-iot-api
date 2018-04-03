@@ -19,7 +19,7 @@ var dbCache = shareUtil.dbCache;
   In the starter/skeleton project the 'get' operation on the '/hello' path has an operationId named 'hello'.  Here,
   we specify that in the exports of this module that 'hello' maps to the function named 'hello'
  */
-module.exports = {
+var functions = {
   getSingleDataByVariableID: getSingleDataByVariableID,
   getMultipleDataByVariableID: getMultipleDataByVariableID,
   addDataByDeviceID: addDataByDeviceID,
@@ -28,6 +28,20 @@ module.exports = {
   addDataBySerialNumber: addDataBySerialNumber,
   fillBatchGetItem: fillBatchGetItem
 };
+
+for (var key in functions) {
+  module.exports[key] = functions[key];
+}
+
+/*module.exports = {
+  getSingleDataByVariableID: getSingleDataByVariableID,
+  getMultipleDataByVariableID: getMultipleDataByVariableID,
+  addDataByDeviceID: addDataByDeviceID,
+  addDataByVariableID: addDataByVariableID,
+  addDataByDeviceName: addDataByDeviceName,
+  addDataBySerialNumber: addDataBySerialNumber,
+  fillBatchGetItem: fillBatchGetItem
+};*/
 
 
 function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
@@ -134,7 +148,6 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
     }
   });
 }
-
 
 function addDataBySerialNumber(req, res) {
   var serialNumber = req.swagger.params.SerialNumber.value;

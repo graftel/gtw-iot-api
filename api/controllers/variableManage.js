@@ -16,7 +16,22 @@ var dbCache = shareUtil.dbCache;
   In the starter/skeleton project the 'get' operation on the '/hello' path has an operationId named 'hello'.  Here,
   we specify that in the exports of this module that 'hello' maps to the function named 'hello'
  */
-module.exports = {
+
+ var functions = {
+   createVariable: createVariable,
+   updateVariable: updateVariable,
+   deleteVariable: deleteVariable,
+   getVariablebyDevice: getVariablebyDevice,
+   getVariableAttributes: getVariableAttributes,
+   getVariableByAsset: getVariableByAsset,
+   IsVariableExist: IsVariableExist
+ }
+
+for (var key in functions) {
+  module.exports[key] = functions[key];
+}
+
+/*module.exports = {
   createVariable: createVariable,
   updateVariable: updateVariable,
   deleteVariable: deleteVariable,
@@ -24,7 +39,7 @@ module.exports = {
   getVariableAttributes: getVariableAttributes,
   getVariableByAsset: getVariableByAsset,
   IsVariableExist: IsVariableExist
-};
+};*/
 
 
 function updateVariableIDInDevice(variableID, deviceID, callback) {
@@ -86,7 +101,7 @@ function updateDeviceCache(deviceid, variableid, variableName, callback) {
   });
 }
 
-function checkVariableInDevice(variableID, deviceID, callback) {    //return true if Variable NOT in Device
+function checkVariableInDevice(variableID, deviceID, callback) {    // return true if Variable NOT in Device
 
   var params = {
     TableName: shareUtil.tables.device,
@@ -1057,7 +1072,6 @@ function getVariableByAssetIDOld(req, res) {
 }
 
 function getVariableByAsset(req, res) {
-
   var assetid = req.swagger.params.AssetID.value;
   var sendData = {
     Items: [],
