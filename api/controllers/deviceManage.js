@@ -2,7 +2,10 @@
 
 var shareUtil = require('./shareUtil.js');
 var asset = require('./asset.js');
-var userManage = require('./userManage.js')
+var userManage = require('./userManage.js');
+var levelup = require('levelup');
+var leveldown = require('leveldown');
+var dbCache = shareUtil.dbCache;
 
 /*
  Once you 'require' a module you can reference the things that it exports.  These are defined in module.exports.
@@ -1043,7 +1046,7 @@ function deleteDeviceByID(deviceid, apiKey, callback) {
 }
 
 function deleteDevicefromUserCache(deviceid, apiKey, callback) {
-  dbCache.get(apiKey,function(err, value) {
+  dbCache.get(apiKey, function(err, value) {
     if (err) {
       console.log('get error', err);  // user's ApiKey not in cache
       callback(true);

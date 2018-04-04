@@ -692,7 +692,7 @@ paths:
       tags:
       - device
       summary: delete a Device
-      description: Delete a Device, remove Device from User and Asset and delete all Variables that are in it
+      description: Delete a Device, remove Device from User and Asset and delete all Variables that are in it. Need ApiKey to succeed
       # used as the method name of the controller
       operationId: deleteDevice
       parameters:

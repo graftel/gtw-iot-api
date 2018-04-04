@@ -86,14 +86,14 @@ function getDevicesFromUser(userid, callback) {
 
 function createUser(req, res) {
   var userobj = req.body;
-  if(userobj.constructor === Object && Object.keys(userobj).length === 0) {
+  if (userobj.constructor === Object && Object.keys(userobj).length === 0) {
     shareUtil.SendInvalidInput(res);
   } else {
     if (!userobj.EmailAddress || !userobj.Password) {
       var msg = "Missing Email Address and/or Password";
        shareUtil.SendInvalidInput(res, msg);
     } else {
-      IsEmailExist(userobj.EmailAddress, function(ret1,data){
+      IsEmailExist(userobj.EmailAddress, function(ret1, data) {
         if (ret1) {       // exists
           shareUtil.SendInvalidInput(res, 'User already exists');
         } else {          // auto generate user id
@@ -114,7 +114,6 @@ function createUser(req, res) {
           shareUtil.awsclient.put(params, function(err, data) {
             if (err) {
               var msg = "Error:" + JSON.stringify(err, null, 2);
-              console.error(msg);
               shareUtil.SendInternalErr(res,msg);
             } else {
               completeRegistrationEmail(userobj.EmailAddress, userobj.UserID, userobj.VerificationCode);
