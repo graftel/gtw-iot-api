@@ -363,7 +363,7 @@ function updateSettings(req, res) {
   }
 }
 
-function updatePassword(req, res){
+function updatePassword(req, res) {
   var emailid = req.swagger.params.EmailAddress.value;
   var password = req.swagger.params.Password.value;
 
@@ -399,7 +399,7 @@ function updatePassword(req, res){
   }
 }
 
-function validateResetPasswordLink(req, res){
+function validateResetPasswordLink(req, res) {
   var emailid = req.swagger.params.EmailAddress.value;
   var vercode = req.swagger.params.VerificationCode.value;
 
@@ -527,7 +527,7 @@ function authenticate(apikey, callback) {
   }
 }
 
-function logIn(req, res){
+function logIn(req, res) {
   var userobj = req.body;
   if (userobj.constructor === Object && Object.keys(userobj).length === 0) {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
@@ -556,7 +556,7 @@ function logIn(req, res){
   }
 }
 
-function activateUser(userid, callback){
+function activateUser(userid, callback) {
   var updateParams = {
     TableName : shareUtil.tables.users,
     Key : { UserID : userid },
@@ -569,7 +569,7 @@ function activateUser(userid, callback){
    });
 }
 
-function IsEmailExist(email, callback){
+function IsEmailExist(email, callback) {
   var Params = {
    TableName : shareUtil.tables.users,
    FilterExpression : "EmailAddress = :v1",
