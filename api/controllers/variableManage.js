@@ -535,7 +535,11 @@ function updateVariable(req, res) {
 function updateVariableInternal(variableobj, data, callback) {
   var updateItems = "set ";
   var expressvalues = {};
+  var deviceid = variableobj.DeviceID;
   var i = 0
+  if (variableobj.DeviceID) {
+    delete variableobj.DeviceID;
+  }
   for (var key in variableobj) {
     if (variableobj.hasOwnProperty(key)) {
       if (key != "VariableID") {
@@ -563,7 +567,7 @@ function updateVariableInternal(variableobj, data, callback) {
       callbcak(false, msg);
     } else {
       if (variableobj.VariableName) {
-        updateDeviceCache(variableobj.DeviceID, variableobj.VariableID, variableobj.VariableName, function(ret, data1) {
+        updateDeviceCache(deviceid, variableobj.VariableID, variableobj.VariableName, function(ret, data1) {
           if (ret) {
             callback(true);
           } else {
@@ -1094,7 +1098,8 @@ function getVariableByAsset(req, res) {
                 sendData.Count = data2.Responses[shareUtil.tables.variable].length;
                 shareUtil.SendSuccessWithData(res, sendData);
               } else {
-                shareUtil.SendNotFound(res, data);
+                var msg = "No variables found in Asset's devices";
+                shareUtil.SendNotFound(res, msg);
               }
             });
           }
@@ -1137,7 +1142,7 @@ function batchGetVariablesAttributesFromDevices(devicesVar, index, gottenVar, ca
 
 function fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index, callback) {
   if (index < devicesVar.length) {
-    if (devicesVar[index].Variables) {
+    if (devicesVar[index].Variables && devicesVar[index].Variables.length > 0) {
       pushVariablesIntoVarArray(devicesVar[index].Variables, 0, getItems, function(ret, data) {
         if (ret) {
           fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index+1, callback);
@@ -1147,6 +1152,7 @@ function fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index, callb
       fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index+1, callback);
     }
   } else {
+    console.log("getItems = " + JSON.stringify(getItems, null, 2));
     callback(true, getItems);
   }
 }
@@ -1189,7 +1195,7 @@ function batchGetDevicesVariables(deviceidList, gottenDev, callback) {
   });
 }
 
-function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
+/*function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
   if (index < deviceidList.length) {
     var getItem = {
       "DeviceID" : deviceidList[index]
@@ -1199,7 +1205,7 @@ function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
   } else {
     callback(true, gottenDev);
   }
-}
+}*/
 
 function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, callback) {
 

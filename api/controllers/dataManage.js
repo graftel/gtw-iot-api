@@ -45,21 +45,15 @@ for (var key in functions) {
 
 
 function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
-  if (index < dataArray.length)
-  {
+  if (index < dataArray.length) {
     var variableid = dataArray[index].VariableID;
     var value = dataArray[index].Value;
-    if (variableid)
-    {
-      if(value)
-      {
+    if (variableid) {
+      if(value) {
         variableManage.IsVariableExist(variableid, function(ret, data) {
-          if (ret)
-          {
-            if(timestamp)
-            {
-              var itemToAdd =
-              {
+          if (ret) {
+            if(timestamp) {
+              var itemToAdd = {
                 PutRequest : {
                   Item : {
                     "VariableID" : variableid,
@@ -68,10 +62,8 @@ function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
                   }
                 }
               }
-            } else // no timestamp provided
-            {
-              var itemToAdd =
-              {
+            } else { // no timestamp provided
+              var itemToAdd = {
                 PutRequest : {
                   Item : {
                     "VariableID" : variableid,
@@ -82,22 +74,22 @@ function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
               }
             }
             itemsToAddArray.push(itemToAdd);
-          } else
-          {
+          } else {
             var msg = "VariableID: " + variableid + " does not exist";
             callback(false, msg);
+            return;     //to avoid that server stay stuck after any error
           }
           fillDataArray(dataArray, timestamp, itemsToAddArray, index + 1, callback);
         });
-      } else
-      {
+      } else {
         var msg = "missing Value for VariableID: " + variableid + " (item number " + index + ")";
         callback(false, msg);
+        return;     //to avoid that server stay stuck after any error
       }
-    } else
-    {
+    } else {
       var msg = "missing VariableID for item number " + index;
       callback(false, msg);
+      return;     //to avoid that server stay stuck after any error
     }
   } else {
     callback(true, itemsToAddArray);
@@ -110,41 +102,34 @@ function batchAddData(itemsToAddArray, callback) {
       "Hx.Data" : itemsToAddArray
     }
   }
-  //console.log("dataParams = " + JSON.stringify(dataParams, null, 2));
   shareUtil.awsclient.batchWrite(dataParams, onPut);
   function onPut(err, data) {
     if (err) {
-      //console.log(JSON.stringify(dataParams, null, 2));
       var msg = "Error:" +  JSON.stringify(err, null, 2);
-      //console.error(msg);
-      callback(false,msg);
+      callback(false, msg);
+      return;   //to avoid that server stay stuck after any error
     } else {
-      //console.log("write items succeeded !");
       callback(true, null);
     }
   }
 }
 
 function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
-
   var dataobj = req.body;
   var dataArray = dataobj.Data;
   var timestamp = dataobj.Timestamp;
   var itemsToAddArray = [];
-
   fillDataArray(dataArray, timestamp, itemsToAddArray, 0, function(ret, data){
-    if(ret)
-    {
+    if (ret) {
       batchAddData(itemsToAddArray, function(ret, data) {
         if (ret) {
           shareUtil.SendSuccess(res);
         } else {
-          shareUtil.SendInternalErr(res, data);
+          shareUtil.SendInternalErr(res);
         }
       });
-    } else
-    {
-      shareUtil.SendNotFound(res, data);
+    } else {
+      shareUtil.SendNotFound(res);
     }
   });
 }

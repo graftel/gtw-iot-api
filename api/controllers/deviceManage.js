@@ -480,13 +480,13 @@ function createDevice(req, res) {
   var displayName = deviceobj.DisplayName;
   var userid = deviceobj.UserID;
 
-  if(userid) {
+  if (userid) {
     IsUserExist(deviceobj.UserID, function(ret, data) {
       if (ret) {
         if (deviceobj.AssetID) {
           isAssetinUser(deviceobj.AssetID, userid, function(ret1, data1) {
             if (ret1) {
-              if(deviceobj.DeviceID) {
+              if (deviceobj.DeviceID) {
                 IsDeviceExist(deviceobj.DeviceID, function(ret2, data2) {
                   if (ret2) {
                     var msg = "DeviceID already exists";
@@ -506,12 +506,12 @@ function createDevice(req, res) {
                         var msg = "Verification Code missing";
                         shareUtil.SendInvalidInput(res, msg);
                       }
-                    } else {
+                    } else {    // no serialNumber provided
                       addDeviceInternal(deviceobj, res);
                     }
                   }
                 });
-              } else {
+              } else {    // no DeviceID provided
                 if (deviceobj.SerialNumber){
                   if (deviceobj.VerificationCode) {
                     IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret3, data3) {
@@ -526,14 +526,59 @@ function createDevice(req, res) {
                     var msg = "Verification Code missing";
                     shareUtil.SendInvalidInput(res, msg);
                   }
-                } else {
+                } else {      // no Serial Number provided
                   addDeviceInternal(deviceobj, res);
                 }
               }
-            } else {
+            } else {    // asset not in user
               shareUtil.SendNotFound(res, data1);
             }
           });
+        } else {    // no AssetID provided
+          if (deviceobj.DeviceID) {
+            IsDeviceExist(deviceobj.DeviceID, function(ret2, data2) {
+              if (ret2) {
+                var msg = "DeviceID already exists";
+                shareUtil.SendInvalidInput(res, msg);
+              } else {
+                if (deviceobj.SerialNumber) {
+                  if (deviceobj.VerificationCode) {
+                    IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret3, data3) {
+                      if (!ret3) {
+                        addDeviceInternal(deviceobj, res);
+                      } else {
+                        var msg = "Serial Number Already Exists";
+                        shareUtil.SendInvalidInput(res, msg);
+                      }
+                    });
+                  } else {
+                    var msg = "Verification Code missing";
+                    shareUtil.SendInvalidInput(res, msg);
+                  }
+                } else {    // no Serial Number provided
+                  addDeviceInternal(deviceobj, res);
+                }
+              }
+            });
+          } else {      // no DeviceID provided
+            if (deviceobj.SerialNumber){
+              if (deviceobj.VerificationCode) {
+                IsDeviceSerialNumberExist(deviceobj.SerialNumber, function(ret3, data3) {
+                  if (!ret3) {
+                    addDeviceInternal(deviceobj, res);
+                  } else {
+                    var msg = "Serial Number Already Exists";
+                    shareUtil.SendInvalidInput(res, msg);
+                  }
+                });
+              } else {
+                var msg = "Verification Code missing";
+                shareUtil.SendInvalidInput(res, msg);
+              }
+            } else {      // no Serial Number provided
+              addDeviceInternal(deviceobj, res);
+            }
+          }
         }
       } else {
         msg = "UserID not found";
@@ -725,18 +770,9 @@ function updateDevice(req, res) {
 }
 
 function updateDeviceInternal(deviceobj, data, callback) {
-  /*if (deviceobj.AssetID) {
-    delete deviceobj['AssetID'];
-  }
   if (deviceobj.UserID) {
     delete deviceobj['UserID'];
   }
-  if (deviceobj.SerialNumber) {
-    delete deviceobj['SerialNumber'];
-  }
-  if (deviceobj.VerificationCode) {
-    delete deviceobj['VerificationCode'];
-  }*/
   var updateItems = "set ";
   var expressvalues = {};
   if (Object.keys(deviceobj).length > 1) {    // check if there is actually at least one attribute provided in the request to update the device
@@ -1203,7 +1239,6 @@ function getDeviceByAssetID(assetid, callback) {
         callback(false, msg);
       } else {
         var devices = data.Items[0].Devices;
-
         if (typeof devices == "undefined") {
           var msg = "Asset does not contain any Device";
           callback(false, msg);
