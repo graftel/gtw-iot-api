@@ -55,7 +55,6 @@ for (var key in functions) {
 };*/
 
 function getAssetByUser(req, res) {
-
   var userid = req.swagger.params.userID.value;
   getAssetByUserID(userid, function(ret, data) {
     if (ret) {
@@ -143,13 +142,10 @@ function fillBatchGetItemAssets(assetidList, getItems, index, callback) {
 }
 
 function deleteGarbageAssets(userid, assetsToDelete, callback) {
-
   var updateExpr = "remove ";
-  for (var k in assetsToDelete)
-  {
+  for (var k in assetsToDelete) {
     updateExpr = updateExpr + "Assets[" + assetsToDelete[k] + "], ";
   }
-
   //console.log("updateExpr = " + updateExpr);
   var updateAsset = {
     TableName : shareUtil.tables.users,
@@ -157,15 +153,12 @@ function deleteGarbageAssets(userid, assetsToDelete, callback) {
     UpdateExpression : updateExpr.slice(0, -2)        // slice to delete ", " at the end of updateExpr
   };
   shareUtil.awsclient.update(updateAsset, onUpdate);
-  function onUpdate(err, data)
-  {
-    if (err)
-    {
+  function onUpdate(err, data) {
+    if (err) {
       var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       console.error(msg);
       var errmsg = { message: msg };
-    } else
-    {
+    } else {
       //console.log("assets deleted from User list of Assets!");
       callback();
     }
@@ -173,40 +166,35 @@ function deleteGarbageAssets(userid, assetsToDelete, callback) {
 }
 
 function getSingleAssetInternal(index, assets, assetsToDelete, deleteIndex, assetout, callback) {
-    if (index < assets.length){
-      if (index == 0)
-      {
-        assetout = [];
+  if (index < assets.length) {
+    if (index == 0) {
+      assetout = [];
+    }
+    var assetsParams = {
+      TableName : shareUtil.tables.assets,
+      KeyConditionExpression : "AssetID = :v1",
+      ExpressionAttributeValues : {':v1' : assets[index]}
+    };
+    shareUtil.awsclient.query(assetsParams, onScan);
+    function onScan(err, data) {
+      if (!err) {
+        if (data.Count == 1) {
+          assetout.push(data.Items[0]);
+        } else {
+          assetsToDelete[deleteIndex] = index;
+          deleteIndex+=1;
+        }
       }
-      var assetsParams = {
-         TableName : shareUtil.tables.assets,
-         KeyConditionExpression : "AssetID = :v1",
-         ExpressionAttributeValues : {':v1' : assets[index]}
-      };
-      shareUtil.awsclient.query(assetsParams, onScan);
-      function onScan(err, data) {
-           if (!err) {
-             if (data.Count == 1)
-             {
-                assetout.push(data.Items[0]);
-             } else
-             {
-               assetsToDelete[deleteIndex] = index;
-               deleteIndex+=1;
-             }
-           }
-           getSingleAssetInternal(index + 1, assets, assetsToDelete, deleteIndex, assetout, callback);
-       }
+      getSingleAssetInternal(index + 1, assets, assetsToDelete, deleteIndex, assetout, callback);
     }
-    else {
-      callback(assetout, assetsToDelete);
-    }
+  } else {
+    callback(assetout, assetsToDelete);
+  }
 }
 
 function getAssetAttributes(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetID = req.swagger.params.AssetID.value;
-
   var assetsParams = {
      TableName : shareUtil.tables.assets,
      KeyConditionExpression : "AssetID = :v1",
@@ -297,7 +285,6 @@ function createAsset(req, res) {
 }
 
 function updateAsset(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetobj = req.body;
   var isValid = true;
   if(assetobj.constructor === Object && Object.keys(assetobj).length === 0) {
@@ -360,11 +347,9 @@ function updateAsset(req, res) {
 }
 
 function deleteDeviceFromAsset(req, res) {
-
   var assetobj = req.body;
   var assetid = assetobj.AssetID;
   var deviceid = assetobj.DeviceID;
-
   // 1st -> get index of device to delete
   var assetsParams = {
     TableName : shareUtil.tables.assets,
@@ -373,40 +358,30 @@ function deleteDeviceFromAsset(req, res) {
     ProjectionExpression : "Devices"
   };
   shareUtil.awsclient.query(assetsParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
-    var msg = "Error:" + JSON.stringify(err, null, 2);
-    shareUtil.SendInternalErr(res, msg);
-    } else
-    {
-      if (data.Count == 0)
-      {
-        var errmsg = {message: "AssetID does not exist or Asset does not contain any Device"};
-        res.status(400).send(errmsg);
-      }
-      else
-      {
+  function onQuery(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      shareUtil.SendInternalErr(res, msg);
+    } else {
+      if (data.Count == 0) {
+        var msg = "AssetID does not exist or Asset does not contain any Device";
+        shareUtil.SendNotFound(res, msg);
+      } else {
         // find index of device in devices list coming from the result of the query in the Asset table
         var devices = data.Items[0].Devices;
         var deviceIndex;
         var index = 0;
-        while (index < devices.length)
-        {
+        while (index < devices.length) {
           //console.log("devices.Items[0]: " + devices[index]);
-          if (devices[index] == deviceid)
-          {
+          if (devices[index] == deviceid) {
             deviceIndex = index;
             index  = devices.length;
-          } else
-          {
+          } else {
             index +=1;
           }
         }
       }
-      if (index > 0)
-      {  // to make sure the update is made after the deviceIndex is found
+      if (index > 0) {  // to make sure the update is made after the deviceIndex is found
         //console.log("device.index = " + deviceIndex);
         var updateExpr = "remove Devices[" + deviceIndex + "]";
         var updateAsset = {
@@ -416,19 +391,12 @@ function deleteDeviceFromAsset(req, res) {
           //ExpressionAttributeValues : { ':V1' : deviceIndex}
         };
         shareUtil.awsclient.update(updateAsset, onUpdate);
-        function onUpdate(err, data)
-        {
-          if (err)
-          {
+        function onUpdate(err, data) {
+          if (err) {
             var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-            console.error(msg);
-            var errmsg = { message: msg };
-            res.status(500).send(errmsg);
-          } else
-          {
-            var msg = { message: "Success" };
-            //console.log("device deleted from Asset!");
-            res.status(200).send(msg);
+            shareUtil.SendInternalErr(res, msg);
+          } else {
+            shareUtil.SendSuccess(res);
           }
         }
       }
@@ -437,7 +405,6 @@ function deleteDeviceFromAsset(req, res) {
 }
 
 function getDevicesFromAsset(assetid, callback) {
-
   var assetsParams = {
     TableName : shareUtil.tables.assets,
     KeyConditionExpression : "AssetID = :V1",
@@ -450,7 +417,6 @@ function getDevicesFromAsset(assetid, callback) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       callback(false, msg);
     } else {
-      ////console.log(JSON.stringify(assetsParams, null ,2));
       if (data.Count == 0) {
         var msg = "AssetID does not exist or Asset does not contain any Device";
         callback(false, msg);
@@ -463,11 +429,9 @@ function getDevicesFromAsset(assetid, callback) {
 }
 
 function deleteVariableFromAsset(req, res) {
-
   var assetobj = req.body;
   var assetid = assetobj.AssetID;
   var variableid = assetobj.VariableID;
-
   // 1st -> get index of variable to delete
   var assetsParams = {
     TableName : shareUtil.tables.assets,
@@ -476,51 +440,34 @@ function deleteVariableFromAsset(req, res) {
     ProjectionExpression : "Variables"
   };
   shareUtil.awsclient.query(assetsParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
+  function onQuery(err, data) {
+    if (err) {
     var msg = "Error:" + JSON.stringify(err, null, 2);
     shareUtil.SendInternalErr(res, msg);
-    } else
-    {
-      //console.log(JSON.stringify(assetsParams, null ,2));
-      if (data.Count == 0)
-      {
-        var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
-        res.status(400).send(errmsg);
-      }
-      else
-      {
+    } else {
+      if (data.Count == 0) {
+        var msg = "AssetID does not exist or Asset does not contain any Variable";
+        shareUtil.SendNotFound(res, msg);
+      } else {
         // find index of variable in variables list coming from the result of the query in the Asset table
         var variables = data.Items[0].Variables;
         var varIndex;
         var index = 0;
-        if ( typeof variables == "undefined"){
-        //  var errmsg = {message: "Asset does not contain any Param"};
-          //res.status(400).send(errmsg);
+        if (typeof variables == "undefined") {
           var msg = "Asset does not contain any Variable";
           shareUtil.SendNotFound(res, msg);
-        }
-        else
-        {
-          while (index < variables.length)
-          {
-            //console.log("variables.Items[0]: " + variables[index]);
-            if (variables[index] == variableid)
-            {
+        } else {
+          while (index < variables.length) {
+            if (variables[index] == variableid) {
               varIndex = index;
               index  = variables.length;
-            } else
-            {
+            } else {
               index +=1;
             }
           }
         }
       }
-      if (index > 0)
-      {  // to make sure the update is made after the deviceIndex is found
-        //console.log("var.index = " + varIndex);
+      if (index > 0) {  // to make sure the update is made after the deviceIndex is found
         var updateExpr = "remove Variables[" + varIndex + "]";
         var updateAsset = {
           TableName : shareUtil.tables.assets,
@@ -528,19 +475,12 @@ function deleteVariableFromAsset(req, res) {
           UpdateExpression : updateExpr
         };
         shareUtil.awsclient.update(updateAsset, onUpdate);
-        function onUpdate(err, data)
-        {
-          if (err)
-          {
+        function onUpdate(err, data) {
+          if (err) {
             var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-            console.error(msg);
-            var errmsg = { message: msg };
-            res.status(500).send(errmsg);
-          } else
-          {
-            var msg = { message: "Success" };
-            //console.log("Variable deleted from Asset!");
-            res.status(200).send(msg);
+            shareUtil.SendInternalErr(res, msg);
+          } else {
+            shareUtil.SendSuccess(res);
           }
         }
       }
@@ -604,19 +544,16 @@ function deleteAsset(req, res) {
 }
 
 function deleteAssetByID(assetid, callback) {
-
   var deleteParams = {
     TableName : shareUtil.tables.assets,
     Key : { AssetID : assetid}
   };
   shareUtil.awsclient.delete(deleteParams, onDelete);
-  function onDelete(err, data){
-    if (err)
-    {
+  function onDelete(err, data) {
+    if (err) {
       var msg = "Unable to delete the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       callback(false, msg);
-    } else
-    {
+    } else {
       callback(true, null);
     }
   }
@@ -673,7 +610,6 @@ function updateSingleAssetKey(asset, assetid, key,  callback){
         ":v" : asset[key]
       }
     };
-
     //console.log(updateParams);
     shareUtil.awsclient.update(updateParams, function (err, data) {
     callback(err,data);

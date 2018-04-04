@@ -59,7 +59,6 @@ for (var key in functions) {
 };*/
 
 function getDevicesFromUser(userid, callback) {
-
   var usersParams = {
     TableName : shareUtil.tables.users,
     KeyConditionExpression : "UserID = :V1",
@@ -179,7 +178,7 @@ function updateUser(req, res) {
     //console.log("is valid = false0");
     shareUtil.SendInvalidInput(res);
   } else {
-    if(!userobj.EmailAddress) {
+    if (!userobj.EmailAddress) {
       //console.log("is valid = false1");
        shareUtil.SendInvalidInput(res);
     } else {
@@ -232,7 +231,7 @@ function updateUser(req, res) {
 }
 
 function updateUserAsset(userID, assetID, callback) {
-  if(!userID) {
+  if (!userID) {
     callback(false, null);
   } else {
     var updateParams = {
@@ -259,7 +258,6 @@ function updateUserAsset(userID, assetID, callback) {
 
 function getSettings(req, res) {
   var userid = req.swagger.params.userID.value;
-
   if (typeof userid == "undefined") {
     shareUtil.SendInvalidInput(res);
   } else {
@@ -309,7 +307,6 @@ function singleDeleteUser(userid, callback){
 
 function deleteUser(req, res) {
   var userid = req.swagger.params.userID.value;
-
   if (typeof userid == "undefined") {
     shareUtil.SendInvalidInput(res, shareUtil.constants.INVALID_INPUT);
   } else {
@@ -366,7 +363,6 @@ function updateSettings(req, res) {
 function updatePassword(req, res) {
   var emailid = req.swagger.params.EmailAddress.value;
   var password = req.swagger.params.Password.value;
-
   if (emailid && password) {
     IsEmailExist(emailid, function(ret1,data) {
       if (ret1) {
@@ -402,7 +398,6 @@ function updatePassword(req, res) {
 function validateResetPasswordLink(req, res) {
   var emailid = req.swagger.params.EmailAddress.value;
   var vercode = req.swagger.params.VerificationCode.value;
-
   if (emailid && vercode) {
     IsEmailExist(emailid,function(ret1,data) {
       if (ret1) {
@@ -511,19 +506,17 @@ function authenticate(apikey, callback) {
  };
   shareUtil.awsclient.query(Params, onQuery);
   function onQuery(err, data) {
-     if (err) {
-         var err_msg = "Error:" + JSON.stringify(err, null, 2);
-         var msg = {
-           message: err_msg
-         }
-         callback(false, msg);
-     } else {
-       if (data.Count == 0) {
-         callback(false, data);
-       } else {
-         callback(true, data);
-       }
-     }
+    if (err) {
+      var err_msg = "Error:" + JSON.stringify(err, null, 2);
+      var msg = { message: err_msg }
+      callback(false, msg);
+    } else {
+      if (data.Count == 0) {
+        callback(false, data);
+      } else {
+        callback(true, data);
+      }
+    }
   }
 }
 

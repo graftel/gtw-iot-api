@@ -102,7 +102,6 @@ function updateDeviceCache(deviceid, variableid, variableName, callback) {
 }
 
 function checkVariableInDevice(variableID, deviceID, callback) {    // return true if Variable NOT in Device
-
   var params = {
     TableName: shareUtil.tables.device,
     KeyConditionExpression : "DeviceID = :v1",
@@ -125,8 +124,7 @@ function checkVariableInDevice(variableID, deviceID, callback) {    // return tr
             callback(true,null);
           }
         }
-      }
-      else {
+      } else {
         var msg = "Error: Cannot find data"
         callback(false,msg);
       }
@@ -150,13 +148,11 @@ function addVariableInternal(variableobj, deviceid, res) {
     },
     ConditionExpression : "attribute_not_exists(VariableID)"
   };
-  console.log("variableobj.DevID = " + deviceid);
   if (variableobj.VariableName) {
     isVariableNameUniqueInDevice(variableobj.VariableName, deviceid, function(ret, data) {
       if (ret) {
         params.Item = Object.assign(params.Item, variableobj);
         delete params.Item['DeviceID'];
-
         shareUtil.awsclient.put(params, function(err, data) {
           if (err) {
             var msg = "Error:" + JSON.stringify(err, null, 2);
@@ -244,12 +240,10 @@ function convertJSONListToArray(JSONlist, array, index, callback){
     convertJSONListToArray(JSONlist, array, index+1, callback);
   } else {
     callback(true, array);
-    ////console.log("array = " + array);
   }
 }
 
 function getVariableNameList(variablesArrayID, index, callback) {
-  //console.log("getVariableNameList entered");
   var itemsToGetArray = [];
   fillParamsArray(variablesArrayID, itemsToGetArray, 0, function(ret, data){
     if (ret) {
@@ -291,7 +285,6 @@ function fillParamsArray(variablesArrayID, itemsToGetArray, index, callback){
 }
 
 function createVariable(req, res) {
-
   var variableobj = req.body;
   var deviceid = req.swagger.params.DeviceID.value;
   if (deviceid) {
@@ -321,45 +314,37 @@ function createVariable(req, res) {
 }
 
 function updateVariableIDInAsset(variableID, assetID, callback) {
-  if(!assetID)
-  {
+  if(!assetID) {
     callback(false, null);
-  }
-  else {
+  } else {
     checkVariableInAsset(variableID, assetID, function(ret, msg1) {
       if (ret) {
         var updateVar = {
           TableName : shareUtil.tables.assets,
-          Key : {
-            AssetID : assetID,
-                },
+          Key : { AssetID : assetID },
           UpdateExpression : 'set Variables = list_append(if_not_exists(Variables, :empty_list), :id)',
           ExpressionAttributeValues: {
             ':id': [variableID],
             ':empty_list': []
           }
         };
-
         shareUtil.awsclient.update(updateVar, function (err, data) {
-            if (err) {
-                var msg = "Error:" +  JSON.stringify(err, null, 2);
-                console.error(msg);
-                callback(false,msg);
-            } else {
-                callback(true,null);
-            }
+          if (err) {
+            var msg = "Error:" +  JSON.stringify(err, null, 2);
+            console.error(msg);
+            callback(false,msg);
+          } else {
+            callback(true,null);
+          }
         });
-      }
-      else {
+      } else {
         callback(false, msg1 );
       }
     });
-
   }
 }
 
 function checkVariableInAsset(variableID, assetID, callback) {
-
   var variables = {
     TableName: shareUtil.tables.assets,
     KeyConditionExpression : "AssetID = :v1",
@@ -369,32 +354,24 @@ function checkVariableInAsset(variableID, assetID, callback) {
   if (err) {
     var msg = "Error:" + JSON.stringify(err, null, 2);
     callback(false,msg);
-  }else{
+  } else {
     if (data.Count == 1) {
-      if (typeof data.Items[0].Variables == "undefined")
-      {
+      if (typeof data.Items[0].Variables == "undefined") {
         callback(true,null);
-      }
-      else {
+      } else {
         if (data.Items[0].Variables.indexOf(variableID) > -1) {
           var msg = "variable Already exists in Asset";
           callback(false,msg);
-        }
-        else {
+        } else {
           callback(true,null);
         }
       }
-
-    }
-    else {
+    } else {
         var msg = "Error: Cannot find data"
         callback(false,msg);
       }
-
     }
   });
-
-
 }
 
 function addVariableInternalToAsset(variableobj, assetid, res) {
@@ -402,9 +379,7 @@ function addVariableInternalToAsset(variableobj, assetid, res) {
   var crypto = require('crypto');
   if (typeof variableobj.VariableID == "undefined"){
     var variableID = uuidv1();
-  }
-  else
-  {
+  } else {
     var variableID = variableobj.VariableID;
   }
   var params = {
@@ -417,39 +392,30 @@ function addVariableInternalToAsset(variableobj, assetid, res) {
   };
   params.Item = Object.assign(params.Item, variableobj);
   delete params.Item['DeviceID'];
-
   shareUtil.awsclient.put(params, function(err, data) {
     if (err) {
         var msg = "Error:" + JSON.stringify(err, null, 2);
         shareUtil.SendInternalErr(res,msg);
-    }else{
-        if (assetid)
-        {
-            updateVariableIDInAsset(variableID, assetid, function(ret1, data){
-              if (ret1){
-                shareUtil.SendSuccess(res);
-              }
-              else{
-                var msg = "Error:" + JSON.stringify(data) + "update failed";
-                shareUtil.SendInternalErr(res,msg);
-              }
-             });
-        }
-        else
-        {
-          //console.log("variableID = "+ variableID);
-          shareUtil.SendSuccess(res);
-        }
-
+    } else {
+      if (assetid) {
+        updateVariableIDInAsset(variableID, assetid, function(ret1, data) {
+          if (ret1){
+            shareUtil.SendSuccess(res);
+          } else {
+            var msg = "Error:" + JSON.stringify(data) + "update failed";
+            shareUtil.SendInternalErr(res,msg);
+          }
+        });
+      } else {
+        shareUtil.SendSuccess(res);
+      }
     }
   });
 }
 
 function addVariableToAsset(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableobj = req.body;
   var assetid = req.swagger.params.AssetID.value;
-  //console.log("assetid = " + assetid);
   if (variableobj.VariableID) {
     IsVariableExist(variableobj.VariableID, function(ret,data){
       if (ret) {
@@ -471,7 +437,6 @@ function addVariableToAsset(req, res) {
 }
 
 function updateVariable(req, res) {
-
   var variableobj = req.body;
   var isValid = true;
   if (variableobj.constructor === Object && Object.keys(variableobj).length === 0) {
@@ -558,8 +523,6 @@ function updateVariableInternal(variableobj, data, callback) {
       UpdateExpression : updateItems,
       ExpressionAttributeValues : expressvalues
     };
-  //console.log("key = " + data.Items[0].VariableID);
-  //console.log(updateParams);
   shareUtil.awsclient.update(updateParams, function (err, data) {
     if (err) {
       var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
@@ -583,12 +546,10 @@ function updateVariableInternal(variableobj, data, callback) {
 }
 
 function deleteSingleVariable(variableID, callback) {
-
   var deleteParams = {
     TableName : shareUtil.tables.variable,
     Key : { VariableID : variableID }
   };
-  //console.log(deleteParams);
   shareUtil.awsclient.delete(deleteParams, onDelete);
   function onDelete(err, data) {
     if (err) {
@@ -598,14 +559,12 @@ function deleteSingleVariable(variableID, callback) {
       callback(false, msg);
     } else {
       var msg = { message: "Success" };
-      //console.log("device deleted!");
       callback(true, null);
     }
   }
 }
 
 function findVariableIndexInDevice(deviceID, variableID, callback){
-
   var devicesParams = {
     TableName : shareUtil.tables.device,
     KeyConditionExpression : "DeviceID = :V1",
@@ -664,12 +623,10 @@ function findVariableIndexInDevice(deviceID, variableID, callback){
 }
 
 function deleteVarFromDeviceList(variableIndex, deviceID, callback) {
-
   if (typeof variableIndex == "undefined") {
     var msg = "Variable not found in Device's list of Variables";
     callback(false, msg);
   } else {
-    //console.log("variable.index = " + variableIndex);
     var updateExpr = "remove Variables[" + variableIndex + "]";
     var updateDevice = {
       TableName : shareUtil.tables.device,
@@ -716,7 +673,6 @@ function deleteVariableFromDeviceCache(deviceid, variableid, callback) {
 }
 
 function findVariableIndexInAsset(assetID, variableID, callback){
-
   var assetsParams = {
     TableName : shareUtil.tables.assets,
     KeyConditionExpression : "AssetID = :V1",
@@ -724,50 +680,37 @@ function findVariableIndexInAsset(assetID, variableID, callback){
     ProjectionExpression : "Variables"
   };
   shareUtil.awsclient.query(assetsParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
+  function onQuery(err, data) {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       callback(false, msg)
-    } else
-    {
-      if (data.Count == 0)
-      {
-        var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
+    } else {
+      if (data.Count == 0) {
+        var msg = "AssetID does not exist or Asset does not contain any Variable";
         callback(false, msg);
-      }
-      else
-      {
+      } else {
         // find index of device in devices list coming from the result of the query in the Asset table
         var variables = data.Items[0].Variables;
         var variableIndex;
         var index = 0;
-        if ( typeof variables == "undefined")
-        {
-          //console.log("undefined");
-          var errmsg = {message: "AssetID does not exist or Asset does not contain any Variable"};
-          res.status(400).send(errmsg);
-        }
-        else
-        {
-          while (index < variables.length)
-          {
+        if ( typeof variables == "undefined") {
+          var msg =  "AssetID does not exist or Asset does not contain any Variable";
+          shareUtil.SendNotFound(res, msg);
+        } else {
+          while (index < variables.length) {
             //console.log("variables.Items[0]: " + variables[index]);
-            if (variables[index] == variableID)
-            {
+            if (variables[index] == variableID) {
               variableIndex = index;
               index  = variables.length;
-            } else
-            {
+            } else {
               index +=1;
             }
           }
         }
       }
-      if (index > 0){
-        deleteVarFromAssetList(variableIndex, assetID, function(ret2, msg){
-          if (ret2){
+      if (index > 0) {
+        deleteVarFromAssetList(variableIndex, assetID, function(ret2, msg) {
+          if (ret2) {
             callback(true);
           } else {
             callback(false, msg);
@@ -779,7 +722,6 @@ function findVariableIndexInAsset(assetID, variableID, callback){
 }
 
 function deleteVarFromAssetList(variableIndex, assetID, callback) {
-
   if (typeof variableIndex == "undefined") {
     var msg = "Variable not found in Asset's list of Variables";
     callback(false, msg);
@@ -795,9 +737,7 @@ function deleteVarFromAssetList(variableIndex, assetID, callback) {
     function onUpdate(err, data) {
       if (err) {
         var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
-        console.error(msg);
-        var errmsg = { message: msg };
-        res.status(500).send(errmsg);
+        shareUtil.SendInternalErr(res, msg);
       } else {
         callback(true);
       }
@@ -807,15 +747,13 @@ function deleteVarFromAssetList(variableIndex, assetID, callback) {
 
 // Delete device by deviceID
 function deleteVariable(req, res) {
-
   var variableID = req.swagger.params.VariableID.value;
   var deviceID = req.swagger.params.DeviceID.value;
-
   IsVariableExist(variableID, function(ret1, data) {
     if (ret1) {
       if (deviceID) {
         findVariableIndexInDevice(deviceID, variableID, function(ret2, data) {
-        if (ret2) {
+          if (ret2) {
             deleteSingleVariable(variableID, function(ret, data) {
               if (ret) {
                 shareUtil.SendSuccess(res);
@@ -842,7 +780,6 @@ function deleteVariable(req, res) {
 }
 
 function getVariablebyDevice(req, res) {
-
   var deviceid = req.swagger.params.DeviceID.value;
   getVariablebyDeviceID(deviceid, function(ret, data) {
     if (ret) {
@@ -923,9 +860,7 @@ function batchGetVariablesAttributes(variableidList, gottenVar, callback) {
 
 function fillBatchGetItem(variableidList, getItems, index, callback) {
   if (index < variableidList.length) {
-    var getItem = {
-      "VariableID" : variableidList[index]
-    }
+    var getItem = { "VariableID" : variableidList[index] }
     getItems.push(getItem);
     fillBatchGetItem(variableidList, getItems, index+1, callback);
   } else {
@@ -934,7 +869,6 @@ function fillBatchGetItem(variableidList, getItems, index, callback) {
 }
 
 function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, callback) {
-
   var updateExpr = "remove ";
   for (var k in variablesToDelete) {
     updateExpr = updateExpr + "Variables[" + variablesToDelete[k] + "], ";
@@ -949,7 +883,6 @@ function deleteGarbageVariablesInDevice(sendData, deviceid, variablesToDelete, c
     if (err) {
       var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       console.error(msg);
-      var errmsg = { message: msg };
     } else {
       callback(sendData);
     }
@@ -984,7 +917,6 @@ function getSingleVariableInternal(index, variables, deviceid, variablesToDelete
 }
 
 function getVariablesFromDeviceArray(devices, index, variablesout, callback) {
-
   if(index < devices.length) {
     getVariablebyDeviceID(devices[index], function(ret, data) {
       if (ret) {
@@ -997,7 +929,6 @@ function getVariablesFromDeviceArray(devices, index, variablesout, callback) {
     });
   } else {
     callback(true, variablesout)
-    //console.log("variablesout = " + JSON.stringify(variablesout, null, 2));
   }
 }
 
@@ -1010,63 +941,40 @@ function getVariableByAssetIDOld(req, res) {
     ProjectionExpression : "Variables"
   };
   shareUtil.awsclient.query(parametersParams, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
+  function onQuery(err, data) {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       shareUtil.SendInternalErr(res, msg);
-    } else
-     {
-      var sendData =
-      {
+    } else {
+      var sendData = {
         Items: [],
         Count: 0
       };
-      if (data.Count == 0)
-      {
+      if (data.Count == 0) {
         var msg = "AssetID not found";
         shareUtil.SendNotFound(res, msg);
-      }
-      else
-      {
+      } else {
         var variables = data.Items[0].Variables;
-        //console.log("variables = " + variables);
-        //console.log("data.count = " + data.Count);
-
-
-        if (typeof variables == "undefined")
-        {
-          //console.log("Error msg : Variables undefined");
+        if (typeof variables == "undefined") {
           msg = "No Variable found in this Asset";
           shareUtil.SendNotFound(res, msg);
-        }
-        else
-        {
-          if (variables.length == 0)
-          {
-            //console.log("Error msg: Variables.length  = 0");
+        } else {
+          if (variables.length == 0) {
             msg = "No Variable found in this Asset";
             shareUtil.SendNotFound(res, msg);
-          }
-          else
-          {
-            //console.log("variables: " + variables);
-            //console.log("variables.length = " + variables.length);
+          } else {;
             var variablesToDelete = [];
             var deleteIndex = 0;
-            getSingleVariableInternal(0, variables, assetid, variablesToDelete, deleteIndex,null, function(variablesdata, variablesToDelete){
+            getSingleVariableInternal(0, variables, assetid, variablesToDelete, deleteIndex,null, function(variablesdata, variablesToDelete) {
               sendData.Items = variablesdata;
               sendData.Count = variablesdata.length;
-              if(variablesToDelete.length == 0)
-              {
-              shareUtil.SendSuccessWithData(res, sendData);
-            } else
-            {
-              deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, function(sendData){
-              shareUtil.SendSuccessWithData(res, sendData);
-            });
-            }
+              if (variablesToDelete.length == 0) {
+                shareUtil.SendSuccessWithData(res, sendData);
+              } else {
+                deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, function(sendData){
+                  shareUtil.SendSuccessWithData(res, sendData);
+                });
+              }
             });
           }
         }
@@ -1152,7 +1060,6 @@ function fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index, callb
       fillBatchGetItemVariablesFromDevices(devicesVar, getItems, index+1, callback);
     }
   } else {
-    console.log("getItems = " + JSON.stringify(getItems, null, 2));
     callback(true, getItems);
   }
 }
@@ -1195,25 +1102,11 @@ function batchGetDevicesVariables(deviceidList, gottenDev, callback) {
   });
 }
 
-/*function fillBatchGetItemDevices(deviceidList, gottenDev, index, callback) {
-  if (index < deviceidList.length) {
-    var getItem = {
-      "DeviceID" : deviceidList[index]
-    }
-    gottenDev.push(getItem);
-    fillBatchGetItemDevices(deviceidList, gottenDev, index+1, callback);
-  } else {
-    callback(true, gottenDev);
-  }
-}*/
-
 function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, callback) {
-
   var updateExpr = "remove ";
   for (var k in variablesToDelete) {
     updateExpr = updateExpr + "Variables[" + variablesToDelete[k] + "], ";
   }
-  //console.log("updateExpr = " + updateExpr);
   var updateAsset = {
     TableName : shareUtil.tables.assets,
     Key : {AssetID : assetid},
@@ -1224,7 +1117,6 @@ function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, cal
     if (err) {
       var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
       console.error(msg);
-      var errmsg = { message: msg };
     } else {
       //console.log("variables deleted from Asset list !");
       callback(sendData);
@@ -1233,29 +1125,21 @@ function deleteGarbageVariablesInAsset(sendData, assetid, variablesToDelete, cal
 }
 
 function getVariableAttributes(req, res) {
-
   var variableid = req.swagger.params.VariableID.value;
-
   var variableParams = {
     TableName: shareUtil.tables.variable,
     KeyConditionExpression : "VariableID = :v1",
     ExpressionAttributeValues : { ':v1' : variableid.toString()}
   }
-
   shareUtil.awsclient.query(variableParams, onQuery);
   function onQuery(err, data) {
     if (err) {
       var msg =  "Unable to scan the variable table.(getVariable) Error JSON:" + JSON.stringify(err, null, 2);
       shareUtil.SendInternalErr(res,msg);
-    }
-    else {
-      if (data.Count == 0)
-      {
+    } else {
+      if (data.Count == 0) {
         shareUtil.SendNotFound(res);
-      }
-      else
-      {
-        //console.log("data = " + JSON.stringify(data.Items[0], null, 2));
+      } else {
         shareUtil.SendSuccessWithData(res, data.Items[0]);
       }
     }
@@ -1263,30 +1147,20 @@ function getVariableAttributes(req, res) {
 }
 
 function IsVariableExist(variableID, callback) {
-
   var Params = {
      TableName : shareUtil.tables.variable,
      KeyConditionExpression : "VariableID = :v1",
      ExpressionAttributeValues : {':v1' : variableID.toString()}
   };
-  //  //console.log(variableID.toString());
   shareUtil.awsclient.query(Params, onQuery);
-  function onQuery(err, data)
-  {
-    if (err)
-    {
-      //console.log("error");
+  function onQuery(err, data) {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       SendInternalErr(res, msg);
-    } else
-    {
-      if (data.Count == 0)
-      {
-        //console.log("data cout  = 0");
+    } else {
+      if (data.Count == 0) {
         callback(false, data);
-      }
-      else
-      {
+      } else {
         callback(true, data);
       }
     }

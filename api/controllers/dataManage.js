@@ -138,7 +138,6 @@ function addDataBySerialNumber(req, res) {
   var serialNumber = req.swagger.params.SerialNumber.value;
   var timestamp = req.body.Timestamp;
   var Data = req.body.Data;
-
   if (Data.Data.length != 0){
     deviceManage.getDeviceIdBySerialNumber(serialNumber, function(ret, data) {
       var deviceid = data;
@@ -164,7 +163,6 @@ function addDataByDeviceNameOld(req, res) {
   var apiKey = req.headers["x-api-key"];
   var Data = req.body.Data;
   var timestamp = req.body.Timestamp;
-
   if (Data.Data.length != 0) {
     userManage.getUserbyApiKeyQuery(apiKey, function (ret, data) {
       if (ret) {
@@ -213,7 +211,6 @@ function addDataByDeviceName(req, res) {
   var apiKey = req.headers["x-api-key"];
   var Data = req.body.Data;
   var timestamp = req.body.Timestamp;
-
   if (Data.Data.length != 0) {
     if (apiKey) {
       dbCache.get(apiKey, function(err, value) {
@@ -639,8 +636,6 @@ function addDataByDeviceID(req, res) {
 }
 
 function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index, deviceid, callback) {
-    //console.log("varNameToValueMap = " + JSON.stringify(varNameToValueMap, null, 2));
-    //console.log(" length = " + Object.keys(varNameToValueMap).length);
   if (index < Object.keys(varNameToValueMap).length) {
     var varName = Object.keys(varNameToValueMap)[index];
     var varValue = varNameToValueMap[varName];
@@ -648,7 +643,6 @@ function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, ind
     var indexOfName = Object.values(varIDtoNameMap).indexOf(varName);
     if (indexOfName > -1) {
       item.VariableID = Object.keys(varIDtoNameMap)[indexOfName];
-      //console.log(item.VariableID);
       item.Value = varValue;
       valueToVarIDMap.push(item);
       mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index+1, deviceid, callback);
@@ -658,7 +652,6 @@ function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, ind
       var variableID = uuidv1();
       createNewVariableFromName(varName, variableID, deviceid, function(ret, data){
         item.VariableID = variableID;
-        //console.log(item.VariableID);
         item.Value = varValue;
         valueToVarIDMap.push(item);
         mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, index+1, deviceid, callback);
@@ -666,12 +659,10 @@ function mapValueToVarID(varNameToValueMap, varIDtoNameMap, valueToVarIDMap, ind
     }
   } else {
     callback(true, valueToVarIDMap);
-    //console.log("valueToVarIDMap = " + JSON.stringify(valueToVarIDMap));
   }
 }
 
 function mapValueToVarID2(varNameToValueMap, varNametoIDMap, valueToVarIDMap, index, deviceid, callback) {
-
   if (index < Object.keys(varNameToValueMap).length) {
     var varName = Object.keys(varNameToValueMap)[index];
     var varValue = varNameToValueMap[varName];
@@ -694,7 +685,6 @@ function mapValueToVarID2(varNameToValueMap, varNametoIDMap, valueToVarIDMap, in
     }
   } else {
     callback(true, valueToVarIDMap);
-    //console.log("valueToVarIDMap = " + JSON.stringify(valueToVarIDMap));
   }
 }
 
@@ -863,7 +853,6 @@ function addMultipleVarToCache(variablesToAddToCache, deviceid, index, callback)
 }
 
 function createNewVariablesFromName(variablesToCreate, deviceid, valueToVarIDMap, index, callback) {
-  console.log("variablesToCreate = " + JSON.stringify(variablesToCreate));
   if (index < Object.keys(variablesToCreate).length) {
     var varName = Object.keys(variablesToCreate)[index];
     var varValue = variablesToCreate[varName];
@@ -909,7 +898,6 @@ function addVarToCache(deviceid, variableName, variableID, callback){
 }
 
 function createNewVariableFromName(varName, varID, deviceid, callback) {
-
   var params = {
     TableName : shareUtil.tables.variable,
     Item : {
@@ -938,7 +926,7 @@ function createNewVariableFromName(varName, varID, deviceid, callback) {
 }
 
 function convertVarIDtoVarNameArrayIntoObj(varIDtoNameMap, varObj, index, callback) {
-  if( index < varIDtoNameMap.length) {
+  if (index < varIDtoNameMap.length) {
     varid = varIDtoNameMap[index].VariableID;
     varName = varIDtoNameMap[index].VariableName;
     varObj[varid] = varName;
@@ -949,7 +937,7 @@ function convertVarIDtoVarNameArrayIntoObj(varIDtoNameMap, varObj, index, callba
 }
 
 function converVarNametoVarIDtArrayIntoObj(varIDtoNameMap, varObj, index, callback) {
-  if( index < varIDtoNameMap.length) {
+  if (index < varIDtoNameMap.length) {
     varid = varIDtoNameMap[index].VariableID;
     varName = varIDtoNameMap[index].VariableName;
     varObj[varName] = varid;
@@ -967,13 +955,10 @@ function convertDataArrToObj(dataArray, dataObj, index, callback) {
     convertDataArrToObj(dataArray, dataObj, index+1, callback)
   } else {
     callback(true, dataObj);
-    //console.log("dataObj = " + JSON.stringify(dataObj, null, 2));
   }
 }
 
 function convertDataArrToObj2(dataArray, dataObj, index, callback) {
-  //console.log("dataArray = " + JSON.stringify(dataArray, null, 2));
-  //console.log("dataArray.length = " + dataArray.length);
   if (index < dataArray.length) {
     var key = Object.keys(dataArray[index]);
     var value2 = Object.values(dataArray[index]);
@@ -981,7 +966,6 @@ function convertDataArrToObj2(dataArray, dataObj, index, callback) {
     convertDataArrToObj2(dataArray, dataObj, index + 1, callback);
   } else {
     callback(true, dataObj);
-    //console.log(" dataObj = " +  JSON.stringify(dataObj, null, 2));
   }
 }
 
@@ -1024,11 +1008,8 @@ function fillBatchGetItem(variableidList, getItems, index, callback) {
 }
 
 function addSingleData(deviceid, dataobj, index, callback) {
-
-  if (index < dataobj.Data.length)
-  {
+  if (index < dataobj.Data.length) {
     var variableName = dataobj.Data[index].VariableName;
-    ////console.log("variableName = " + variableName);
     var nameParams = {
       TableName: shareUtil.tables.variable,
       FilterExpression : "VariableName = :v1",
@@ -1037,29 +1018,21 @@ function addSingleData(deviceid, dataobj, index, callback) {
     }
     shareUtil.awsclient.scan(nameParams, onScan);
     function onScan(err, data) {
-
-      if (err)
-      {
+      if (err) {
         var msg = "Error:" + JSON.stringify(err, null, 2);
         shareUtil.SendInternalErr(res, msg);
-      } else
-      {
-        if (data.Count == 0)
-        {
+      } else {
+        if (data.Count == 0) {
           var msg = "data.Count == 0"
-          //shareUtil.SendNotFound(res, msg);
           // have to create a new var name
-          createNewVariable(deviceid, dataobj, index, function(){
+          createNewVariable(deviceid, dataobj, index, function() {
             addSingleData(deviceid, dataobj, index+1, callback);
           });
-        } else
-        {
+        } else {
           // varName found so add Value to RawData
           var variableid = data.Items[0].VariableID;
-          ////console.log("variableid = " + variableid);
           var timestamp = dataobj.Timestamp;
           var value = dataobj.Data[index].Value;
-
           var dataParams = {
             TableName : shareUtil.tables.data,
             Item : {
@@ -1068,60 +1041,45 @@ function addSingleData(deviceid, dataobj, index, callback) {
               Value : value
             }
           }
-          ////console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
-
           shareUtil.awsclient.put(dataParams, onPut);
-          function onPut(err, data)
-          {
-            if (err)
-            {
+          function onPut(err, data) {
+            if (err) {
               var msg = "Error:" + JSON.stringify(err, null, 2);
               shareUtil.SendInternalErr(res, msg);
-            } else
-            {
-              //shareUtil.SendSuccess(res);
+            } else {
               //update current value in Variable table
               var updateVarParams = {
                 TableName : shareUtil.tables.variable,
-                Key : {
-                  VariableID: variableid
-                },
+                Key : { VariableID: variableid },
                 UpdateExpression : "set CurrentValue = :v1",
                 ExpressionAttributeValues : {':v1' : value}
               }
-
               shareUtil.awsclient.update(updateVarParams, function(err, data) {
-                if (err)
-                {
+                if (err) {
                   var msg = "Unable to update the settings table.( POST /settings) Error JSON:" +  JSON.stringify(err, null, 2);
                   console.error(msg);
-                } else
-                {
+                } else {
                    //console.log("device updated!");
                    addSingleData(deviceid, dataobj, index+1, callback);
                 }
               });
             }
-          //  addSingleData(deviceid, dataobj, index+1, callback);
           }
         }
       }
     }
-  } else
-  {
+  } else {
     return callback();
   }
 }
 
 function createNewVariable(deviceid, dataobj, index, callback) {
-
   var uuidv1 = require('uuid/v1');
   var crypto = require('crypto');
   var variableid = uuidv1();
   var variableName = dataobj.Data[index].VariableName;
   var timestamp = dataobj.Timestamp;
   var variableValue = dataobj.Data[index].Value;
-
   var params = {
     TableName : shareUtil.tables.variable,
     Item : {
@@ -1132,61 +1090,46 @@ function createNewVariable(deviceid, dataobj, index, callback) {
     },
     ConditionExpression :  "attribute_not_exists(VariableID)"
   };
-
   shareUtil.awsclient.put(params, onPut);
   function onPut(err, data) {
-    if (err)
-    {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       shareUtil.SendInternalErr(res,msg);
-    } else
-    {
-      updateVariableIDInDevice(variableid, deviceid, function(ret1, data){
-        if (ret1)
-        {
-          //shareUtil.SendSuccess(res);
-          //console.log("timestamp in update = " + timestamp);
+    } else {
+      updateVariableIDInDevice(variableid, deviceid, function(ret1, data) {
+        if (ret1) {
           addRawData(variableid, timestamp, variableValue, function() {
             addSingleData(deviceid, dataobj, index, callback);
           });
-        }
-        else{
+        } else {
           var msg = "Error:" + JSON.stringify(data);
           shareUtil.SendInternalErr(res,msg);
         }
-       });
+      });
     }
   }
 }
 
 function updateVariableIDInDevice(variableID, deviceID, callback) {
-  if(!deviceID)
-  {
+  if(!deviceID) {
     return callback(false, null);
-  }
-  else {
+  } else {
     var updateParams = {
       TableName : shareUtil.tables.device,
-      Key : {
-        DeviceID : deviceID,
-      },
+      Key : { DeviceID : deviceID },
       UpdateExpression : 'set #variable = list_append(if_not_exists(#variable, :empty_list), :id)',
-      ExpressionAttributeNames: {
-        '#variable': 'Variables'
-      },
+      ExpressionAttributeNames: { '#variable': 'Variables' },
       ExpressionAttributeValues: {
         ':id': [variableID],
         ':empty_list': []
       }
     };
-
     shareUtil.awsclient.update(updateParams, function (err, data) {
       if (err) {
         var msg = "Error:" +  JSON.stringify(err, null, 2);
         console.error(msg);
         callback(false,msg);
-      } else
-      {
+      } else {
         return callback(true,null);
       }
     });
@@ -1194,7 +1137,6 @@ function updateVariableIDInDevice(variableID, deviceID, callback) {
 }
 
 function addRawData(variableid, timestamp, value, callback) {
-
   var dataParams = {
     TableName : shareUtil.tables.data,
     Item : {
@@ -1203,20 +1145,12 @@ function addRawData(variableid, timestamp, value, callback) {
       Value : value
     }
   }
-  ////console.log("dataParams = "  + JSON.stringify(dataParams, null, 2));
-  ////console.log("timestamp = " + timestamp);
-
   shareUtil.awsclient.put(dataParams, onPut);
-  function onPut(err, data)
-  {
-    if (err)
-    {
+  function onPut(err, data) {
+    if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
-      //console.log(msg);
-      //shareUtil.SendInternalErr(res, msg);
-    } else
-    {
-      //shareUtil.SendSuccess(res);
+      console.log(msg);
+    } else {
       return callback();
     }
   }
@@ -1226,75 +1160,54 @@ function getSingleDataByVariableID(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var variableID = req.swagger.params.VariableID.value;
   var dataTimeStamp = req.swagger.params.TimeStamp.value;
-
-   var params = {
-     TableName: shareUtil.tables.data,
-     KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp = :v2",
-     ExpressionAttributeValues : {':v1' : variableID.toString(),
-                                  ':v2' : dataTimeStamp}
+  var params = {
+    TableName: shareUtil.tables.data,
+    KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp = :v2",
+    ExpressionAttributeValues : {':v1' : variableID.toString(),
+                                ':v2' : dataTimeStamp}
    };
-   ////console.log(params)
-   shareUtil.awsclient.query(params, function(err, data) {
-   if (err) {
-     var msg = "Error:" + JSON.stringify(err, null, 2);
-     console.error(msg);
-     shareUtil.SendInternalErr(res,msg);
-   }else{
-     ////console.log(data);
-     if (data.Count == 0)
-     {
-       var msg = "Error: Cannot find data"
+  shareUtil.awsclient.query(params, function(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      console.error(msg);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      if (data.Count == 0) {
+        var msg = "Error: Cannot find data";
         shareUtil.SendInvalidInput(res, msg);
-     }
-     else if (data.Count == 1)
-     {
+      } else if (data.Count == 1) {
         var out_data = {'Value' : data.Items[0]["Value"]};
-        ////console.log(out_data);
         shareUtil.SendSuccessWithData(res, out_data);
-     }
-     else {
-       var msg = "Error: data count is not 1"
+      } else {
+        var msg = "Error: data count is not 1"
         shareUtil.SendInternalErr(res,msg);
-     }
-
-   }
-   });
-  // this sends back a JSON response which is a single string
-
+      }
+    }
+  });
 }
 
 function getSingleCalculatedData(req, res) {
   // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetID = req.swagger.params.AssetID.value;
   var dataTimeStamp = req.swagger.params.TimeStamp.value;
-
   var params = {
     TableName: tables.calculatedData,
     KeyConditionExpression : "AssetID = :v1 and EpochTimeStamp = :v2",
     ExpressionAttributeValues : {':v1' : assetID.toString(),
                                 ':v2' : dataTimeStamp}
   };
-  ////console.log(params)
   docClient.query(params, function(err, data) {
-  if (err)
-  {
+  if (err) {
     var msg = "Error:" + JSON.stringify(err, null, 2);
     console.error(msg);
     shareUtil.SendInternalErr(res,msg);
-  } else
-  {
-    //console.log(data);
-    if (data.Count == 0)
-    {
+  } else {
+    if (data.Count == 0) {
       var msg = "Error: Cannot find data"
       shareUtil.SendInvalidInput(res,NOT_EXIST);
-    }
-    else if (data.Count == 1)
-    {
+    } else if (data.Count == 1) {
       shareUtil.SendSuccessWithData(res, data.Items[0]);
-    }
-    else
-    {
+    } else {
       var msg = "Error: data count is not 1"
       shareUtil.SendInternalErr(res,msg);
      }
@@ -1307,33 +1220,28 @@ function getMultipleDataByVariableID(req, res) {
   var variableID = req.swagger.params.VariableID.value;
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
-
-   var params = {
-     TableName: shareUtil.tables.data,
-     KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp between :v2 and :v3",
-     ExpressionAttributeValues : {':v1' : variableID.toString(),
-                                  ':v2' : dataTimeStampFrom,
-                                  ':v3' : dataTimeStampTo}
+  var params = {
+    TableName: shareUtil.tables.data,
+    KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp between :v2 and :v3",
+    ExpressionAttributeValues : {':v1' : variableID.toString(),
+                                ':v2' : dataTimeStampFrom,
+                                ':v3' : dataTimeStampTo}
    };
-   //console.log(params)
-   shareUtil.awsclient.query(params, function(err, data) {
-   if (err) {
-     var msg = "Error:" + JSON.stringify(err, null, 2);
-     console.error(msg);
-     shareUtil.SendInternalErr(res,msg);
-   }else{
-     ////console.log(data);
-     if (data.Count == 0)
-     {
-      var msg = "Error: Cannot find data"
-      shareUtil.SendInvalidInput(res, msg);
-     }
-     else {
+  shareUtil.awsclient.query(params, function(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      console.error(msg);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      if (data.Count == 0) {
+        var msg = "Error: Cannot find data"
+        shareUtil.SendInvalidInput(res, msg);
+      } else {
         delete data["ScannedCount"];
         shareUtil.SendSuccessWithData(res, data);
-     }
-   }
- });
+      }
+    }
+  });
 }
 
 function getMultipleCalculatedData(req, res) {
@@ -1342,77 +1250,62 @@ function getMultipleCalculatedData(req, res) {
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
 
-   var params = {
-     TableName: tables.calculatedData,
-     KeyConditionExpression : "AssetID = :v1 and EpochTimeStamp between :v2 and :v3",
-     ExpressionAttributeValues : {':v1' : assetID.toString(),
-                                  ':v2' : dataTimeStampFrom,
-                                  ':v3' : dataTimeStampTo}
-   };
-   docClient.query(params, function(err, data) {
-   if (err) {
-     var msg = "Error:" + JSON.stringify(err, null, 2);
-     console.error(msg);
-     shareUtil.SendInternalErr(res,msg);
-   }else{
-     ////console.log(data);
-     if (data.Count == 0)
-     {
-       var msg = "Error: Cannot find data"
+  var params = {
+    TableName: tables.calculatedData,
+    KeyConditionExpression : "AssetID = :v1 and EpochTimeStamp between :v2 and :v3",
+    ExpressionAttributeValues : {':v1' : assetID.toString(),
+                                ':v2' : dataTimeStampFrom,
+                                ':v3' : dataTimeStampTo}
+  };
+  docClient.query(params, function(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      console.error(msg);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      if (data.Count == 0) {
+        var msg = "Error: Cannot find data"
         shareUtil.SendInvalidInput(res,NOT_EXIST);
-     }
-     else {
+      } else {
         delete data["ScannedCount"];
         shareUtil.SendSuccessWithData(res, data);
-     }
-
-   }
- });
-  // this sends back a JSON response which is a single string
+      }
+    }
+  });
 }
 
 function getMultipleCalculatedDataWithParameter(req, res) {
-  // variables defined in the Swagger document can be referenced using req.swagger.params.{parameter_name}
   var assetID = req.swagger.params.AssetID.value;
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
   var parameterid = req.swagger.params.ParameterID.value;
-
-   var params = {
-     TableName: tables.calculatedData,
-     KeyConditionExpression : "AssetID = :v1 and EpochTimeStamp between :v2 and :v3",
-     ExpressionAttributeValues : {':v1' : assetID.toString(),
-                                  ':v2' : dataTimeStampFrom,
-                                  ':v3' : dataTimeStampTo
+  var params = {
+    TableName: tables.calculatedData,
+    KeyConditionExpression : "AssetID = :v1 and EpochTimeStamp between :v2 and :v3",
+    ExpressionAttributeValues : {':v1' : assetID.toString(),
+                                ':v2' : dataTimeStampFrom,
+                                ':v3' : dataTimeStampTo
                                 }
-   };
-   ////console.log(params);
-   docClient.query(params, function(err, data) {
-   if (err) {
-     var msg = "Error:" + JSON.stringify(err, null, 2);
-     console.error(msg);
-     shareUtil.SendInternalErr(res,msg);
-   }else{
-     if (data.Count == 0)
-     {
-       var msg = "Error: Cannot find data"
+  };
+  docClient.query(params, function(err, data) {
+    if (err) {
+      var msg = "Error:" + JSON.stringify(err, null, 2);
+      console.error(msg);
+      shareUtil.SendInternalErr(res,msg);
+    } else {
+      if (data.Count == 0) {
+        var msg = "Error: Cannot find data"
         shareUtil.SendInvalidInput(res,NOT_EXIST);
-     }
-     else {
-        ////console.log(data);
+      } else {
         delete data["ScannedCount"];
         var out_data = {};
         out_data['values'] = [];
         out_data['timestamp'] = [];
         out_data['parameter'] = parameterid;
-        //out_data['count'] = data.Count;
-        for (var i in data.Items)
-        {
+        for (var i in data.Items) {
           var singleData = data.Items[i];
-          for (var j in singleData.Data)
-          {
-            if (singleData.Data[j].ParamID == parameterid)
-            {
+          for (var j in singleData.Data) {
+            if (singleData.Data[j].ParamID == parameterid) {
               out_data['timestamp'].push(singleData['EpochTimeStamp']);
               out_data['values'].push(singleData.Data[j].Value);
             }
@@ -1421,13 +1314,10 @@ function getMultipleCalculatedDataWithParameter(req, res) {
         }
         if (out_data['count'] == 0){
           shareUtil.SendInvalidInput(res,NOT_EXIST);
-        } else
-        {
+        } else {
           shareUtil.SendSuccessWithData(res, out_data);
         }
-     }
-
-   }
- });
-  // this sends back a JSON response which is a single string
+      }
+    }
+  });
 }
