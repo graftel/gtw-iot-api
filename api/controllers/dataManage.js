@@ -3,6 +3,7 @@ var shareUtil = require('./shareUtil.js');
 var variableManage = require('./variableManage.js');
 var deviceManage = require('./deviceManage.js');
 var userManage = require('./userManage.js');
+var dataCalcul = require('./dataCalcul.js')
 
 var levelup = require('levelup');
 var leveldown = require('leveldown');
@@ -49,10 +50,10 @@ function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
     var variableid = dataArray[index].VariableID;
     var value = dataArray[index].Value;
     if (variableid) {
-      if(value) {
+      if (value) {
         variableManage.IsVariableExist(variableid, function(ret, data) {
           if (ret) {
-            if(timestamp) {
+            if (timestamp) {
               var itemToAdd = {
                 PutRequest : {
                   Item : {
@@ -119,11 +120,12 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
   var dataArray = dataobj.Data;
   var timestamp = dataobj.Timestamp;
   var itemsToAddArray = [];
-  fillDataArray(dataArray, timestamp, itemsToAddArray, 0, function(ret, data){
+  fillDataArray(dataArray, timestamp, itemsToAddArray, 0, function(ret, data) {
     if (ret) {
       batchAddData(itemsToAddArray, function(ret, data) {
         if (ret) {
           shareUtil.SendSuccess(res);
+          dataCalcul.triggerCalculData(itemsToAddArray, 0);
         } else {
           shareUtil.SendInternalErr(res);
         }
@@ -132,6 +134,10 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
       shareUtil.SendNotFound(res);
     }
   });
+}
+
+function testAsynch(data) {
+  dataCalcul.triggerCalculData(data, 0);
 }
 
 function addDataBySerialNumber(req, res) {
