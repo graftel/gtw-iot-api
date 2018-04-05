@@ -25,6 +25,7 @@ var tables = {
 
 var dbTest = levelup(leveldown('./mydb'));
 var dbCache = levelup(leveldown('./mydbCache'));
+var cacheVar = levelup(leveldown('./mycacheVar'));
 
 module.exports = {
   tables: tables,
@@ -35,6 +36,7 @@ module.exports = {
     NOT_EXIST: NOT_EXIST,
     INTERNAL_ERR: INTERNAL_ERR
   },
+  cacheVar,
   dbTest,
   dbCache,
   awsclient: docClient,

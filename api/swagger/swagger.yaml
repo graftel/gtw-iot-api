@@ -22,7 +22,7 @@ tags:
 - name: asset
   description: Get Asset Info
   externalDocs:
-    description: Find out more
+    description: Find out more  
     url: http://swagger.io
 - name: data
   description: retrieve data from database

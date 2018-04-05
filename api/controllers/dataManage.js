@@ -97,7 +97,7 @@ function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
   }
 }
 
-function batchAddData(itemsToAddArray, callback) {
+function batchAddData(itemsToAddArray, callback) {    // !! Hx.Data hardcoded !!
   var dataParams = {
     RequestItems : {
       "Hx.Data" : itemsToAddArray
@@ -122,10 +122,10 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
   var itemsToAddArray = [];
   fillDataArray(dataArray, timestamp, itemsToAddArray, 0, function(ret, data) {
     if (ret) {
-      batchAddData(itemsToAddArray, function(ret, data) {
-        if (ret) {
+      batchAddData(data, function(ret1, data1) {
+        if (ret1) {
           shareUtil.SendSuccess(res);
-          dataCalcul.triggerCalculData(itemsToAddArray, 0);
+          dataCalcul.triggerCalculData(data, 0);
         } else {
           shareUtil.SendInternalErr(res);
         }
