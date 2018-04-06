@@ -27,7 +27,8 @@ var functions = {
   addDataByVariableID: addDataByVariableID,
   addDataByDeviceName: addDataByDeviceName,
   addDataBySerialNumber: addDataBySerialNumber,
-  fillBatchGetItem: fillBatchGetItem
+  fillBatchGetItem: fillBatchGetItem,
+  addDataByVariableIDINternal: addDataByVariableIDINternal
 };
 
 for (var key in functions) {
@@ -119,19 +120,33 @@ function addDataByVariableID(req, res) {     // !! Hx.Data hardcoded !!
   var dataobj = req.body;
   var dataArray = dataobj.Data;
   var timestamp = dataobj.Timestamp;
+  addDataByVariableIDINternal(dataArray, timestamp, function(ret, data) {
+    if (ret) {
+      shareUtil.SendSuccess(res);
+    } else {
+      if (data == 'NOT_FOUND') {
+        shareUtil.SendNotFound(res);
+      } else {
+        shareUtil.SendInternalErr(res);
+      }
+    }
+  });
+}
+
+function addDataByVariableIDINternal(dataArray, timestamp, callback) {
   var itemsToAddArray = [];
   fillDataArray(dataArray, timestamp, itemsToAddArray, 0, function(ret, data) {
     if (ret) {
       batchAddData(data, function(ret1, data1) {
         if (ret1) {
-          shareUtil.SendSuccess(res);
+          callback(true);
           dataCalcul.triggerCalculData(data, 0);
         } else {
-          shareUtil.SendInternalErr(res);
+          callback(false, data1);
         }
       });
     } else {
-      shareUtil.SendNotFound(res);
+      callback(false, 'NOT_FOUND');
     }
   });
 }
