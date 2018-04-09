@@ -28,22 +28,13 @@ var functions = {
   addDataByDeviceName: addDataByDeviceName,
   addDataBySerialNumber: addDataBySerialNumber,
   fillBatchGetItem: fillBatchGetItem,
-  addDataByVariableIDINternal: addDataByVariableIDINternal
+  addDataByVariableIDINternal: addDataByVariableIDINternal,
+  getMultipleDataByVariableIDInternal : getMultipleDataByVariableIDInternal
 };
 
 for (var key in functions) {
   module.exports[key] = functions[key];
 }
-
-/*module.exports = {
-  getSingleDataByVariableID: getSingleDataByVariableID,
-  getMultipleDataByVariableID: getMultipleDataByVariableID,
-  addDataByDeviceID: addDataByDeviceID,
-  addDataByVariableID: addDataByVariableID,
-  addDataByDeviceName: addDataByDeviceName,
-  addDataBySerialNumber: addDataBySerialNumber,
-  fillBatchGetItem: fillBatchGetItem
-};*/
 
 
 function fillDataArray(dataArray, timestamp, itemsToAddArray, index, callback) {
@@ -149,10 +140,6 @@ function addDataByVariableIDINternal(dataArray, timestamp, callback) {
       callback(false, 'NOT_FOUND');
     }
   });
-}
-
-function testAsynch(data) {
-  dataCalcul.triggerCalculData(data, 0);
 }
 
 function addDataBySerialNumber(req, res) {
@@ -518,18 +505,15 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
                               var variablesNotInCache = {};
                               mapValueToVarID3(data3, data8, valueToVarIDMap, 0, deviceid, variablesNotInCache, function(ret4, data4) {
                                 if (ret4) {
-                                  var itemsToAddArray = [];
-                                  fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
+                                  addDataByVariableIDINternal(data4, timestamp, function(ret5, data5) {
                                     if (ret5) {
-                                      batchAddData(data5, function(ret6, data6) {
-                                        if (ret6) {
-                                          callback(true);
-                                        } else {
-                                          callback(false, data6);
-                                        }
-                                      });
+                                      callback(true);
                                     } else {
-                                      callback(false);
+                                      if (data5 == 'NOT_FOUND') {
+                                        callback(false, data5);
+                                      } else {
+                                        callback(false, data5);
+                                      }
                                     }
                                   });
                                 } else {
@@ -565,18 +549,15 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
                       var variablesNotInCache = {};
                       mapValueToVarID3(data3, data7, valueToVarIDMap, 0, deviceid, variablesNotInCache, function(ret4, data4) {
                         if (ret4) {
-                          var itemsToAddArray = [];
-                          fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
+                          addDataByVariableIDINternal(data4, timestamp, function(ret5, data5) {
                             if (ret5) {
-                              batchAddData(data5, function(ret6, data6) {
-                                if (ret6) {
-                                  callback(true);
-                                } else {
-                                  callback(false, data6);
-                                }
-                              });
+                              callback(true);
                             } else {
-                              callback(false);
+                              if (data5 == 'NOT_FOUND') {
+                                callback(false, data5);
+                              } else {
+                                callback(false, data5);
+                              }
                             }
                           });
                         } else {
@@ -605,18 +586,15 @@ function addDataByDeviceIDInternal2(deviceid, data, timestamp, callback) {
           if (ret3) {
             mapValueToVarID3(data3, obj, valueToVarIDMap, 0, deviceid, variablesNotInCache, function(ret4, data4) {
               if (ret4) {
-                var itemsToAddArray = [];
-                fillDataArray(data4, timestamp, itemsToAddArray, 0, function(ret5, data5) {
+                addDataByVariableIDINternal(data4, timestamp, function(ret5, data5) {
                   if (ret5) {
-                    batchAddData(data5, function(ret6, data6) {
-                      if (ret6) {
-                        callback(true);
-                      } else {
-                        callback(false, data6);
-                      }
-                    });
+                    callback(true);
                   } else {
-                    callback(false);
+                    if (data5 == 'NOT_FOUND') {
+                      callback(false, data5);
+                    } else {
+                      callback(false, data5);
+                    }
                   }
                 });
               } else {
@@ -1241,25 +1219,35 @@ function getMultipleDataByVariableID(req, res) {
   var variableID = req.swagger.params.VariableID.value;
   var dataTimeStampFrom = req.swagger.params.StartTimeStamp.value;
   var dataTimeStampTo = req.swagger.params.EndTimeStamp.value;
+  getMultipleDataByVariableIDInternal(variableID, dataTimeStampFrom, dataTimeStampTo, function(ret, data) {
+    if (ret) {
+      shareUtil.SendSuccessWithData(res, data);
+    } else {
+      shareUtil.SendInvalidInput(res, data);
+    }
+  });
+}
+
+function getMultipleDataByVariableIDInternal(variableID, dataTimeStampFrom, dataTimeStampTo, callback) {
   var params = {
     TableName: shareUtil.tables.data,
     KeyConditionExpression : "VariableID = :v1 and EpochTimeStamp between :v2 and :v3",
     ExpressionAttributeValues : {':v1' : variableID.toString(),
                                 ':v2' : dataTimeStampFrom,
                                 ':v3' : dataTimeStampTo}
-   };
+  };
   shareUtil.awsclient.query(params, function(err, data) {
     if (err) {
       var msg = "Error:" + JSON.stringify(err, null, 2);
       console.error(msg);
-      shareUtil.SendInternalErr(res,msg);
+      callback(false, msg);
     } else {
       if (data.Count == 0) {
         var msg = "Error: Cannot find data"
-        shareUtil.SendInvalidInput(res, msg);
+        callback(false, msg);
       } else {
         delete data["ScannedCount"];
-        shareUtil.SendSuccessWithData(res, data);
+        callback(true, data);
       }
     }
   });

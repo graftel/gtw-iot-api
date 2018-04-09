@@ -34,9 +34,6 @@ function triggerCalculData(data, index) {
         triggerCalculData(data, index+1);
         if (data1.Items[0].RequiredBy && data1.Items[0].RequiredBy.length > 0) {
           getVariableEquationInfo(data1.Items[0].RequiredBy, data1.Items[0].VariableID, timestamp, varValue);
-          //console.log();
-          //console.log("variableID =  " + data1.Items[0].VariableID);
-          //console.log("reqBy = " + data1.Items[0].RequiredBy);
         }
       }
     }
@@ -45,7 +42,6 @@ function triggerCalculData(data, index) {
 
 function getVariableEquationInfo(reqByVar, varidReq, timestamp, varValue) {
   for (key in reqByVar) {
-    //console.log("data[key] = " + data[key]);
     var varid = reqByVar[key];
     var param = {
       TableName : shareUtil.tables.variable,
@@ -58,7 +54,6 @@ function getVariableEquationInfo(reqByVar, varidReq, timestamp, varValue) {
       if (err) {
         console.log(JSON.stringify(err, null, 2));
       } else {
-        //console.log("reqBy, eqInfo = " + JSON.stringify(data2, null, 2));
         handleCalculation(data.Items[0], varidReq, timestamp, varValue);
       }
     }
@@ -99,7 +94,7 @@ function handleCalculation(equationInfo, varidReq, timestamp, varValue) {
       if (err) {
         console.log('put error', err);
       } else {
-       console.log("varidCache updated");
+       //console.log("varidCache updated");
       }
     });
   });
@@ -110,7 +105,6 @@ function calculVariable(varidCache, equation, variables, variableID) {
     // do the calcul here, then push calculated data to the DB with addDataByVariableIDINternal
     parseEquation(varidCache, equation, variables, variableID, function(ret, data) {
       if (ret) {
-        //console.log("data calculated = " + data);
         var timestamp = varidCache.Timestamp;
         var dataArray = [];
         dataArray[0] = {
@@ -124,6 +118,8 @@ function calculVariable(varidCache, equation, variables, variableID) {
             console.log("push of " + variableID + " failed");
           }
         });
+      } else {
+        console.log(data);
       }
     });
   }
@@ -135,12 +131,51 @@ function parseEquation(varidCache, equation, variables, variableID, callback) {
     scope[key] = varidCache.Variables[variables[key]];
   }
   console.log(variableID + " : equation  = " + equation);
-  //console.log("scope = " + JSON.stringify(scope, null, 2));
-  var c = math.eval(equation, scope);
-  callback(true, c);
-  var eqTest = "avg(A, 60)";
-  var index = eqTest.indexOf("avg");
-  console.log("index = " + index);
-  var eqTest2 = eqTest.slice(index+4);
-  console.log("eqTest2 = " + eqTest2);
+  handleAVG(equation, variables, function(ret, data) {
+    if (ret) {
+      var c = math.eval(data, scope);
+      callback(true, c);
+    } else {
+      callback(false, data);
+    }
+  });
+}
+
+function handleAVG(equation, scope, callback) {
+  if (equation.indexOf("avg") > -1) {
+    var indexAvg = equation.indexOf("avg");
+    var slicedEquation = equation.slice(indexAvg+4);
+    var commaIndex = slicedEquation.indexOf(",");
+    var varIDtoAvg = slicedEquation.slice(0, commaIndex);
+    varIDtoAvg = scope[varIDtoAvg];
+    var parenthesisIndex = slicedEquation.indexOf(")");
+    var avgPeriod = slicedEquation.slice(commaIndex+1, parenthesisIndex);
+    var avgEquation = equation.slice(indexAvg, (indexAvg+4) + parenthesisIndex + 1);
+    var endTimeStamp = Math.floor((new Date).getTime()/1000);
+    var startTimeStamp = endTimeStamp - avgPeriod;
+    dataManage.getMultipleDataByVariableIDInternal(varIDtoAvg, startTimeStamp, endTimeStamp, function(ret, data) {
+      if (ret) {
+        calculAVG(data, function(data1) {
+          equation = equation.replace(avgEquation, data1);
+          console.log("new equation = " + equation);
+          handleAVG(equation, scope, callback)
+        });
+      } else {
+        var msg = "error = " + data;
+        callback(false, msg);
+      }
+    });
+  } else {
+    callback(true, equation);
+  }
+}
+
+function calculAVG(data, callback) {
+  var sumValues = 0;
+  for (index in data.Items) {
+    sumValues+= Number(data.Items[index].Value);
+  }
+  var nbrOfValues = data.Count;
+  var avg = math.round(sumValues/nbrOfValues, 2);     // avg rounded to hundredth
+  callback(avg);
 }
